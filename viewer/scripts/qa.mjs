@@ -4,7 +4,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 const page=await browser.newPage({viewport:{width:1536,height:1024},deviceScaleFactor:1});
 async function capture(path){
- await page.evaluate(async()=>{const s=window.camxStudio;s.active=false;const canvas=s.renderer.domElement;const img=document.createElement('img');img.id='camx-snapshot';img.src=canvas.toDataURL('image/png');img.style.cssText=canvas.style.cssText;canvas.replaceWith(img);await img.decode();});
+ await page.evaluate(async()=>{const s=window.camxStudio;s.active=false;s.resize();s.view('perspective');s.renderer.render(s.scene,s.camera);const canvas=s.renderer.domElement;const img=document.createElement('img');img.id='camx-snapshot';img.src=canvas.toDataURL('image/png');img.style.cssText='position:absolute;inset:0;width:100%;height:100%;display:block';canvas.replaceWith(img);await img.decode();});
  try{await page.screenshot({path,fullPage:true,timeout:60000});}
  finally{await page.evaluate(()=>document.getElementById('camx-snapshot').replaceWith(window.camxStudio.renderer.domElement));}
 }
@@ -14,6 +14,8 @@ await page.waitForFunction(()=>window.camxStudio && window.camxStudio.parts.size
 await page.locator('#loading').waitFor({state:'hidden'});await page.waitForTimeout(700);
 await mkdir('../docs/design',{recursive:true});
 assert.equal(await page.locator('h1').textContent(),'Made to move.');
+assert.ok(await page.evaluate(()=>window.camxStudio.parts.get('idler_cover').parent===window.camxStudio.pan),'passive shell follows pan');
+assert.ok(await page.evaluate(()=>window.camxStudio.parts.get('idler_cover').userData.hardware===false),'passive shell is printable');
 for(const [id,value]of [['pan',35],['tilt',-20],['explode',70]])await page.locator('#'+id).evaluate((el,v)=>{el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));},value);
 assert.ok(await page.evaluate(()=>window.camxStudio.pan.rotation.y<0));
 assert.ok(await page.evaluate(()=>window.camxStudio.tilt.rotation.x<0));

@@ -18,12 +18,12 @@ with zipfile.ZipFile(dest/'camx-viewer.zip','w',zipfile.ZIP_DEFLATED) as z:
 (dest/'checksums.sha256').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in sorted(dest.glob('*.zip'))))
 notes=f'''## 📷 CAMX — made to move
 
-A two-servo ESP32 camera pan/tilt mechanism based on the owner's sketches, with a build123d model and a browser 3D studio.
+A symmetrical U-yoke ESP32 camera pan/tilt mechanism based on the owner's revised sketch, with matching rounded side shells, one tilt servo and one passive bearing side, with a build123d model and a browser 3D studio.
 
 ### 📦 Pick your download
 
 - **camx-project.zip** — full source, CAD, firmware, drawings, previews and build guide.
-- **camx-print-parts.zip** — eleven printable parts in STL/3MF, plus the print layout and guide.
+- **camx-print-parts.zip** — thirteen printable parts in STL/3MF, plus the print layout and guide.
 - **camx-firmware.zip** — PlatformIO source and compiled classic ESP32 binaries.
 - **camx-viewer.zip** — ready-to-serve static website, including CAD downloads.
 - **checksums.sha256** — verify all four archives.

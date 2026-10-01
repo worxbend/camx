@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
-const moving=new Set(['pan_arm','spindle_keeper','tilt_cover','tilt_servo','camera_cradle','camera_envelope','camera_lens','idler_arm','idler_bearing_retainer','idler_bearing_625','idler_spacer','idler_outer_washers','idler_axle_M5']);
+const moving=new Set(['pan_arm','spindle_keeper','tilt_cover','tilt_servo','camera_cradle','camera_envelope','camera_lens','drive_arm','idler_arm','idler_cover','idler_bearing_retainer','idler_bearing_625','idler_spacer','idler_outer_washers','idler_axle_M5']);
 const tilting=new Set(['camera_cradle','camera_envelope','camera_lens','idler_spacer','idler_outer_washers','idler_axle_M5']);
-const colors={idler_arm:0x4b6268,idler_bearing_retainer:0xaab6bf,base:0x303b45,lid:0x48525b,pan_arm:0x4b6268,tilt_cover:0x39444e,camera_cradle:0xd5aa67,bearing_retainer:0xaab6bf,spindle_keeper:0xaab6bf,camera_envelope:0x232a31,camera_lens:0x183f48};
-const offsets={idler_arm:[-35,66,0],idler_bearing_retainer:[-55,66,0],idler_bearing_625:[-45,66,0],idler_spacer:[-35,95,0],idler_outer_washers:[-65,95,0],idler_axle_M5:[-80,95,0],base:[0,0,0],tripod_nut_retainer:[0,15,0],lid:[0,32,0],bearing_retainer:[0,48,0],spindle_keeper:[0,10,0],pan_arm:[0,66,0],tilt_cover:[35,66,0],camera_cradle:[-35,95,0],camera_envelope:[-35,120,0],camera_lens:[-35,120,0],pan_servo:[0,12,0],tilt_servo:[35,66,0],bearing_6805:[0,39,0],esp32_envelope:[-35,0,0],capacitor_envelope:[30,0,20],usb_pcb_envelope:[0,0,-30],usb_flange_envelope:[0,0,-30]};
+const colors={drive_arm:0x4b6268,idler_cover:0x39444e,idler_arm:0x4b6268,idler_bearing_retainer:0xaab6bf,base:0x303b45,lid:0x48525b,pan_arm:0x4b6268,tilt_cover:0x39444e,camera_cradle:0xd5aa67,bearing_retainer:0xaab6bf,spindle_keeper:0xaab6bf,camera_envelope:0x232a31,camera_lens:0x183f48};
+const offsets={drive_arm:[35,66,0],idler_cover:[-60,66,0],idler_arm:[-35,66,0],idler_bearing_retainer:[-55,66,0],idler_bearing_625:[-45,66,0],idler_spacer:[-35,95,0],idler_outer_washers:[-65,95,0],idler_axle_M5:[-80,95,0],base:[0,0,0],tripod_nut_retainer:[0,15,0],lid:[0,32,0],bearing_retainer:[0,48,0],spindle_keeper:[0,10,0],pan_arm:[0,66,0],tilt_cover:[35,66,0],camera_cradle:[-35,95,0],camera_envelope:[-35,120,0],camera_lens:[-35,120,0],pan_servo:[0,12,0],tilt_servo:[35,66,0],bearing_6805:[0,39,0],esp32_envelope:[-35,0,0],capacitor_envelope:[30,0,20],usb_pcb_envelope:[30,0,0],usb_flange_envelope:[30,0,0]};
 export class CadStudio{
  constructor(el,manifest){
   this.el=el;this.parts=new Map();this.hidden=new Set();this.manifest=manifest;this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#0b1017');this.scene.fog=new THREE.Fog('#0b1017',550,1000);
@@ -21,7 +21,7 @@ export class CadStudio{
   this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(el);this.view('perspective');
   this.active=true;this.animate=()=>{if(!this.active)return;this.controls.update();this.renderer.render(this.scene,this.camera);requestAnimationFrame(this.animate)};this.animate();
  }
- resize(){const w=this.el.clientWidth,h=this.el.clientHeight;this.renderer.setSize(w,h);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();}
+ resize(){const w=this.el.clientWidth,h=this.el.clientHeight;this.renderer.setSize(w,h);this.camera.aspect=w/h;const scale=Math.max(1,.82/this.camera.aspect);this.camera.position.sub(this.controls.target).multiplyScalar(scale/(this.viewportScale??1)).add(this.controls.target);this.viewportScale=scale;this.camera.updateProjectionMatrix();}
  async load(url){
   const {scene:root}=await new GLTFLoader().loadAsync(url);root.scale.setScalar(1000);this.scene.add(root);this.scene.updateMatrixWorld(true);
   const assembly=root.getObjectByName('CAMX_complete_reference_assembly');if(!assembly)throw Error('CAD assembly group not found');
@@ -37,7 +37,7 @@ export class CadStudio{
  }
  view(name){
   const target=new THREE.Vector3(0,72,0);this.controls.target.copy(target);
-  const views={perspective:[235,175,305],front:[0,90,400],side:[400,90,0],top:[0,440,.01]};this.camera.position.fromArray(views[name]);this.camera.up.set(0,1,0);this.controls.update();
+  const views={perspective:[235,175,305],front:[0,90,400],side:[400,90,0],top:[0,440,.01]};this.camera.position.fromArray(views[name]).sub(target).multiplyScalar(this.viewportScale??1).add(target);this.camera.up.set(0,1,0);this.controls.update();
  }
  update({pan=0,tilt=0,explode=0,hardware=true,wireframe=false}){
   this.pan.rotation.y=-THREE.MathUtils.degToRad(pan);this.tilt.rotation.x=THREE.MathUtils.degToRad(tilt);

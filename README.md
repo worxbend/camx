@@ -22,17 +22,19 @@
 
 ## ✨ The vision
 
-Take an Anker PowerConf webcam. Give it a smooth pan axis, a balanced tilt cradle, and a compact enclosure that actually looks like a device you'd keep on your desk.
+Take an Anker PowerConf webcam. Give it a smooth pan axis, a balanced tilt cradle, and a rounded enclosure that actually looks like a device you'd keep on your desk.
 
-CAMX follows the owner's hand-drawn concept: **a curved camera cradle and an ESP32 beside the pan servo in the base**, upgraded with your approved **two-sided tilt support**. The camera bolts on through its existing **1/4″-20 tripod thread**. The USB-C panel board and **1000 µF capacitor** get dedicated space inside.
+CAMX follows the owner's hand-drawn concept: **a curved camera cradle and an ESP32 beside the pan servo in the base**, rebuilt to match your revised sketch with **matching rounded arm housings, mirrored pivot caps, a circular pan platform and a U-shaped support**. The passive housing has the same outer shape as the servo side, with bearing hardware inside. The camera bolts on through its existing **1/4″-20 tripod thread**. The USB-C panel board and **1000 µF capacitor** get dedicated space inside.
 
-> 🧪 **Prototype, with receipts.** The firmware compiles and **435 CAD/mesh/clearance checks pass**. Hardware dimensions are still provisional; physical fit and load testing are the next step. Print the fit coupon first.
+> 🧪 **Prototype, with receipts.** The firmware compiles and **583 CAD/mesh/clearance checks pass**. Hardware dimensions are still provisional; physical fit and load testing are the next step. Print the fit coupon first.
 
 ## 🌀 Spin it before you print it
 
 [**Launch the live viewer →**](https://worxbend.github.io/camx/)
 
 Drag to orbit. Scroll to zoom. Preview **±60° pan** and **±25° tilt**, pull the assembly apart with the explode slider, toggle hardware or wireframe, and hide individual parts. It works on desktop and phone.
+
+![Symmetrical U-yoke — actual CAD front view](exports/images/front.png)
 
 The viewer loads the **actual CAD GLB**. The webcam, PCB, servos and capacitor are simplified hardware envelopes. This site previews the design; it does not send commands to your motors.
 
@@ -55,15 +57,15 @@ Tagged releases publish these files automatically. Between releases, download th
 | Part of the project | What it does |
 | --- | --- |
 | [🎛️ Firmware](firmware/) | 50 Hz servo PWM, speed limiting, Wi-Fi controls, serial commands, saved calibration and latched STOP |
-| [📐 Parametric CAD](cad/) | Eleven printable parts, stock servo horn interfaces, adjustable component dimensions |
+| [📐 Parametric CAD](cad/) | Thirteen printable parts, stock servo horn interfaces, adjustable component dimensions |
 | [🌀 3D studio](viewer/) | Orbit, pan/tilt previews, explode, wireframe, part visibility and downloads |
 | [🛠️ Assembly guide](docs/assembly.md) | Wiring, fasteners, print orientation, balance and first startup |
 | [✅ Validation](exports/validation.json) | CAD solids, watertight STL/3MF meshes and sampled clearance checks |
 | [🚀 GitHub Actions](.github/workflows/) | Firmware/CAD rebuilds, viewer tests, release downloads and Pages deployment |
 
-### 🖨️ Eleven printed pieces. Zero printed spline teeth.
+### 🖨️ Thirteen printed pieces. Zero printed spline teeth.
 
-`base` · `lid` · `pan_arm` · `camera_cradle` · `tilt_cover` · `bearing_retainer` · `spindle_keeper` · `tripod_nut_retainer` · `fit_coupon` · `idler_arm` · `idler_bearing_retainer`
+`drive_arm` · `base` · `lid` · `pan_arm` · `camera_cradle` · `tilt_cover` · `bearing_retainer` · `spindle_keeper` · `tripod_nut_retainer` · `idler_cover` · `fit_coupon` · `idler_arm` · `idler_bearing_retainer`
 
 Use your servos' original horns and center screws. A **6805 bearing (25 × 37 × 7 mm)** supports the pan platform. Steel hardware provides the camera screw and captive tripod nut.
 
@@ -126,8 +128,8 @@ For browser QA and polished stills, install Chromium with `npx playwright instal
 **Every `v*` tag:** run the same checks, then create a GitHub Release with all four ZIPs and SHA-256 checksums.
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
 **GitHub Pages:** the separate [Pages workflow](.github/workflows/pages.yml) builds and publishes the live studio on main/master pushes. Configure **Settings → Pages → Source → GitHub Actions**. All site assets ship locally; repository subpaths such as `/camx/` work without changing the Vite base.
@@ -136,13 +138,13 @@ git push origin v0.1.0
 <summary><strong>🧪 What was checked — and what still needs real hardware</strong></summary>
 
 - Firmware compilation and pure C++ motion tests.
-- Eleven valid CAD solids; watertight, oriented STL/3MF exports with matching bounds.
+- Thirteen valid CAD solids; watertight, oriented STL/3MF exports with matching bounds.
 - Sampled pan/tilt clearance; the exact count is recorded in the validation report.
 - Browser loading, pivots, explosion, visibility, wireframe, view presets, reset, downloads and guide navigation.
 - Desktop **1536 × 1024** and mobile **390 × 844**, including a `/camx/` deployment path.
 - Archive integrity and generated-file checksums.
 
-Still to verify: your component measurements, printer tolerances, actual servo travel, cable slack, load balance, heat, jitter and durability. The opposite 625 bearing reduces cantilever loading, while the thicker arm and root braces improve stiffness. The SG90 still carries part of the load; physical durability remains unverified. See the [structural review](docs/structural-review.md). Published SG90 stall torque is not a continuous load rating.
+Still to verify: your component measurements, printer tolerances, actual servo travel, cable slack, load balance, heat, jitter and durability. The opposite 625 bearing reduces cantilever loading. Matching 6 mm side plates, rounded foot joints and a wider base support the symmetrical assembly. The SG90 still carries part of the load; physical durability remains unverified. See the [structural review](docs/structural-review.md). Published SG90 stall torque is not a continuous load rating.
 
 [Workflow decisions](docs/workflow.md) · [Visual concept and review](docs/design/fidelity-review.md) · [Browser QA](docs/design/viewer-qa.json)
 

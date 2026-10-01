@@ -7,7 +7,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from PIL import Image
-COLORS={'idler_arm':'#4293a1','idler_bearing_retainer':'#bbcbd6','base':'#263746','lid':'#526775','pan_arm':'#4293a1','camera_cradle':'#efb970','tilt_cover':'#3a586a','bearing_retainer':'#bbcbd6','spindle_keeper':'#bbcbd6','tripod_nut_retainer':'#bbcbd6'}
+COLORS={'drive_arm':'#4293a1','idler_cover':'#3a586a','idler_arm':'#4293a1','idler_bearing_retainer':'#bbcbd6','base':'#263746','lid':'#526775','pan_arm':'#4293a1','camera_cradle':'#efb970','tilt_cover':'#3a586a','bearing_retainer':'#bbcbd6','spindle_keeper':'#bbcbd6','tripod_nut_retainer':'#bbcbd6'}
 
 def mesh(shape):
  # STL exporter respects face orientation; use it rather than raw OCCT face triangulation.
@@ -45,7 +45,7 @@ def render_all(parts,hardware,p,out):
  render_scene(allitems,out/'images/assembled','CAMX / bearing-supported pan & tilt')
  render_scene(allitems,out/'images/rear','CAMX / connector & servo access',elev=18,azim=115)
  render_scene(printables,out/'images/structure','CAMX / printed structure',elev=20,azim=-65)
- offsets={'idler_arm':(-35,0,45),'idler_bearing_retainer':(-55,0,45),'tripod_nut_retainer':(0,0,0),'base':(0,0,-25),'lid':(0,0,10),'bearing_retainer':(0,0,22),'spindle_keeper':(0,0,25),'pan_arm':(0,0,45),'camera_cradle':(-32,0,62),'tilt_cover':(45,0,45)}
+ offsets={'drive_arm':(35,0,45),'idler_cover':(-60,0,45),'idler_arm':(-35,0,45),'idler_bearing_retainer':(-55,0,45),'tripod_nut_retainer':(0,0,0),'base':(0,0,-25),'lid':(0,0,10),'bearing_retainer':(0,0,22),'spindle_keeper':(0,0,25),'pan_arm':(0,0,45),'camera_cradle':(-32,0,62),'tilt_cover':(45,0,45)}
  exploded=[(n,s,np.array(offsets.get(n,(0,0,0)))) for n,s in parts.items() if n!='fit_coupon']
  render_scene(exploded,out/'images/exploded','CAMX / assembly order',notes='Base → lid + bearing → horn + spindle → curved cradle → servo cover\nExploded offsets are for visualization only.')
  for n,s in parts.items():render_scene([(n,s,zero)],out/'images'/n,n.replace('_',' ').title(),formats=('png','svg'))

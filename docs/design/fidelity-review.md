@@ -19,3 +19,9 @@ Functional coverage is recorded in viewer-qa.json: loading, pan/tilt, explosion,
 ## Two-sided revision
 
 The owner's requested update adds an opposite 625 bearing support, 6 mm main arm and root braces. Rounded plan corners and small edge fillets soften the base, lid, arms, hood and cradle. Functional bearing seats, stock horn recesses and screw paths preserve fit geometry. The actual CAD and revised motion groups are used for the refreshed browser captures. The original concept remains a visual direction, not a manufacturing reference.
+
+## Symmetrical U-yoke redesign
+
+The latest owner sketch replaces the earlier asymmetric construction. The two outer covers are checked as exact mirrored solids in CAD validation. Both side shells are now generated from the same rounded profile and mirrored exactly across X=0, including their circular pivot caps. Internal functional geometry differs for the SG90 and 625 bearing. Matching cradle cheeks, a wider rounded base and a circular rotating platform with an enclosing pan cowl carry the new PTZ-inspired silhouette. The original UI concept remains a styling reference only.
+
+Final desktop and phone captures were inspected against the original UI concept. The new symmetrical geometry is an intentional owner-requested departure from that concept. Desktop framing and the mobile camera distance were adjusted for the wider body; snapshot capture forces a viewport resize before rendering to prevent stale frames after the part list collapses.
