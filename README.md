@@ -174,21 +174,22 @@ For browser QA and polished stills, install Chromium with `npx playwright instal
 
 ## 🚀 Ship it with Actions
 
-**Every push / PR:** build the ESP32 firmware → test motion logic → regenerate CAD → check geometry → test the browser → upload downloadable artifacts.
+**Every push / PR:** build the SolidJS client and LittleFS image → compile ESP32 firmware → test motion, parser and LAN bridge → regenerate and check CAD → test desktop/mobile controls and viewer → upload downloadable artifacts.
 
-**Every `v*` tag:** run the same checks, then create a GitHub Release with all four ZIPs and SHA-256 checksums.
+**Every `v*` tag:** run the same checks, then create a GitHub Release with all five ZIPs and SHA-256 checksums.
 
 ```sh
-git tag v0.3.0
-git push origin v0.3.0
+git tag v0.4.1
+git push origin v0.4.1
 ```
 
-**GitHub Pages:** the separate [Pages workflow](.github/workflows/pages.yml) builds and publishes the live studio on main/master pushes. Configure **Settings → Pages → Source → GitHub Actions**. All site assets ship locally; repository subpaths such as `/camx/` work without changing the Vite base.
+**GitHub Pages:** the separate [Pages workflow](.github/workflows/pages.yml) builds and publishes the live studio and control demo on main/master pushes. Configure **Settings → Pages → Source → GitHub Actions**. All site assets ship locally; repository subpaths such as `/camx/` work without changing the Vite base.
 
 <details>
 <summary><strong>🧪 What was checked — and what still needs real hardware</strong></summary>
 
-- Firmware compilation and pure C++ motion tests.
+- Firmware compilation, pure C++ motion tests and HTTP/JSON parser fuzzing with sanitizers.
+- Nineteen control-client tests and three local bridge checks, including paired movement, calibration, cancellation, reconnect and token privacy.
 - Thirteen valid CAD solids; watertight, oriented STL/3MF exports with matching bounds.
 - Sampled pan/tilt clearance; the exact count is recorded in the validation report.
 - Browser loading, pivots, explosion, visibility, wireframe, view presets, reset, downloads and guide navigation.
@@ -207,6 +208,6 @@ Still to verify: your component measurements, printer tolerances, actual servo t
 
 **Sketch → CAD → print → move.** 🖤
 
-Built with **build123d · PlatformIO · Three.js** by **worxbend**.
+Built with **build123d · PlatformIO · SolidJS 2 · Three.js** by **worxbend**.
 
 </div>

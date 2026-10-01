@@ -4,7 +4,7 @@
 2. Make unknown dimensions explicit in `cad/parameters.json`. Camera model, actual mass/CG, servo clone flange/horn, ESP32 board dimensions, USB-C module and capacitor remain unmeasured. Defaults are estimates. Print the fit coupon before the mechanism.
 3. Support pan loads using a 6805 bearing (25 × 37 × 7 mm). The SG90 turns the stock horn, not a printed spline. A removable keeper retains the spindle below the bearing. A fixed outer retainer holds the bearing. The tilt axis lies near camera CG; the user-approved opposite 625 bearing support reduces cantilever loading. Matching 6 mm arm plates and rounded foot supports improve stiffness; this remains an unqualified prototype.
 4. Keep the electronics in the stationary base: PCB edge rails, capacitor cup and tie slots, panel USB-C aperture and two flange screw holes, PSU cable entry and strain relief, underside steel 1/4-20 nut with a printed retainer cap. Camera USB remains connected to the host computer with a flexible service loop.
-5. Implement PlatformIO firmware with 50 Hz PWM, nonblocking speed limiting, persistent calibration, Wi-Fi AP/browser control, serial commands, latched STOP and PWM disabled on boot. Keep AI tracking on an optional host computer.
+5. Implement PlatformIO firmware with 50 Hz PWM, nonblocking speed limiting, persistent calibration, station Wi-Fi with endless reconnect and authenticated HTTP/browser control, serial commands, latched STOP and PWM disabled on boot. Keep AI tracking on an optional host computer.
 6. Generate print-oriented STL and 3MF for each part, assembly STEP/BREP/GLB/3MF, print-layout 3MF, vector SVG/DXF drawings and PNG/JPEG/WebP/SVG images. Validate CAD solids, watertight meshes and swept camera/mechanism clearance. Publish exact CAD geometry to the viewer.
 7. Build a static Vite/Three.js viewer and GitHub Pages workflow. Check desktop/mobile layout and part visibility, pan, tilt, explode, wireframe, camera views, downloads and guide links. Generate a downloadable archive and record checks.
 8. Physical commissioning: measure hardware, update parameters, print coupon, fit empty mechanism, center servos without horns, assemble and balance, then expand travel only after cable clearance and torque checks. Hardware validation requires the real components.
@@ -21,3 +21,9 @@ Matte graphite base and matching full-height side shells, restrained raised pan 
 - [build123d exports](https://build123d.readthedocs.io/en/latest/): installed 0.13.0 signatures were inspected and exports generated locally.
 - [Three.js OrbitControls](https://threejs.org/docs/pages/OrbitControls.html) and [GLTFLoader](https://threejs.org/docs/pages/GLTFLoader.html): viewer controls and model loading.
 - [GitHub Pages custom workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages): deployment setup.
+
+## Control-client implementation
+
+Three parallel workstreams implemented the SolidJS 2 client, its browser/transport tests and documentation, and the firmware calibration/heartbeat/filesystem API. Integration added a dependency-free localhost LAN bridge, validated asset staging, partition-table-derived filesystem flashing instructions, standalone client downloads and Pages deployment. The client uses SolidJS 2.0.0-rc.13 with exact runtime/compiler pins and a committed lockfile.
+
+The browser never arms on connection or reconnect. STOP cancels queued motion, calibration requires disabled PWM, and the optional heartbeat begins off. Tokens remain in memory. Nineteen client tests, three bridge tests, firmware compilation and sanitizer parser tests passed locally; simulated devices do not replace physical commissioning. Visual references and actual interface previews are in `docs/design/`.
