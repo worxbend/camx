@@ -9,7 +9,7 @@
     844
   ],
   "checks": [
-    "17 CAD part groups loaded",
+    "all CAD part groups loaded",
     "pan/tilt pivots",
     "explode transforms",
     "hardware visibility",

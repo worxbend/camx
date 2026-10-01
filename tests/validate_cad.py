@@ -34,14 +34,14 @@ for name,shape in parts.items():
  checks.append(name+': CAD valid, one solid, STL + 3MF watertight/oriented/bed aligned, matching bounds')
 # All printed pieces must have zero-volume mutual overlap at neutral assembly.
 for a,b in itertools.combinations([n for n in parts if n!='fit_coupon'],2):clear(parts[a],parts[b],f'neutral parts {a}/{b}')
-for a,b in [('base','pan_servo'),('base','esp32_envelope'),('base','usb_pcb_envelope'),('base','capacitor_envelope'),('lid','pan_servo'),('pan_arm','bearing_6805'),('pan_arm','tilt_servo'),('camera_cradle','camera_envelope'),('camera_cradle','tilt_servo'),('tilt_cover','tilt_servo')]:clear(parts[a],hw[b],f'neutral hardware {a}/{b}')
+for a,b in [('base','pan_servo'),('base','esp32_envelope'),('base','usb_pcb_envelope'),('base','capacitor_envelope'),('lid','pan_servo'),('pan_arm','bearing_6805'),('pan_arm','tilt_servo'),('camera_cradle','camera_envelope'),('camera_cradle','tilt_servo'),('tilt_cover','tilt_servo'),('idler_arm','idler_bearing_625'),('idler_arm','idler_spacer'),('camera_cradle','idler_axle_M5')]:clear(parts[a],hw[b],f'neutral hardware {a}/{b}')
 for angle in range(-25,26,5):
  transform=Pos(0,0,p['tilt_axis_z'])*Rot(angle,0,0)*Pos(0,0,-p['tilt_axis_z'])
  for name in ['camera_cradle','camera_envelope']:
   shape=transform*(parts[name] if name in parts else hw[name])
-  for fixed in ['pan_arm','tilt_cover','lid','base']:clear(shape,parts[fixed],f'tilt {angle}: {name}/{fixed}')
+  for fixed in ['pan_arm','tilt_cover','idler_arm','idler_bearing_retainer','lid','base']:clear(shape,parts[fixed],f'tilt {angle}: {name}/{fixed}')
 for angle in range(-60,61,10):
- for name in ['pan_arm','camera_cradle','tilt_cover','spindle_keeper']:
+ for name in ['pan_arm','camera_cradle','tilt_cover','spindle_keeper','idler_arm','idler_bearing_retainer']:
   shape=Rot(0,0,angle)*parts[name]
   for fixed in ['lid','base','bearing_retainer']:clear(shape,parts[fixed],f'pan {angle}: {name}/{fixed}')
 result={'passed':True,'checks':len(checks),'details':checks,'limits':{'tilt':[-25,25],'pan':[-60,60]},'limitations':['finite sampled poses, not continuous proof','hardware envelopes approximate','horns/fasteners/cables not collision modeled','dimensions unconfirmed','no physical load testing']}

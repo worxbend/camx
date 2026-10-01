@@ -17,7 +17,7 @@ Use case: ui-mockup. One complete 1536 × 1024 desktop screen for CAMX, an inter
 
 ## Intentional functional/geometry differences from the concept
 
-- Preserve the owner's single upright and single side curved cradle; the concept generator drew a second cradle cheek, which is absent in actual CAD.
+- The owner approved a second tilt support with an opposite 625 bearing. The actual model now has two cradle cheeks, a thicker main arm, root braces and rounded enclosure edges.
 - Show actual CAD edges, pan turntable, screw apertures, vents, retained tripod nut and approximate camera/hardware envelopes rather than idealized product surfacing or invented optics.
 - Add live angle and explosion readouts and a collapsed Part visibility control to make the viewer useful.
 - Show hardware toggles all nonprintable hardware, including the camera. Part visibility enables finer control.

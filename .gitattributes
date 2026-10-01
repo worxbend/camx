@@ -1,0 +1,10 @@
+exports/** linguist-generated=true
+exports/**/*.brep -diff
+exports/**/*.step -diff
+exports/**/*.obj -diff
+exports/**/*.off -diff
+exports/**/*.svg -diff
+exports/**/*.dxf -diff
+exports/**/*.gltf -diff
+exports/checksums.sha256 -diff
+docs/build.html linguist-generated=true

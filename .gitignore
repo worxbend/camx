@@ -13,3 +13,10 @@ viewer/playwright-report/
 
 # Local reference photos supplied for design, not project deliverables.
 /photo_*_2026-10-01_20-44-11.jpg
+
+# Local credentials and release staging.
+.aws
+.aws/
+.env
+.env.*
+release/

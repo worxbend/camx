@@ -1,4 +1,4 @@
-"""CAMX v1: single-arm gimbal based on the user's photos 7/8.
+"""CAMX v1: two-sided bearing-assisted gimbal based on the user's photos 7/8.
 Millimetres. Z up, camera looks -Y, tilt about X, pan about Z.
 Hardware dimensions in parameters.json are provisional measured-fit defaults.
 Run from any directory: python cad/model.py [--params path] [--out path].
@@ -18,6 +18,8 @@ def yhole(d,length,x,y,z): return Pos(x,y,z)*Rot(-90,0,0)*Cylinder(d/2,length,al
 def rounded(w,d,h,r,x=0,y=0,z=0):
  s=Box(w,d,h,align=MIN)
  s=s.fillet(r,s.edges().filter_by(__import__('build123d').Axis.Z))
+ horizontal=s.edges().filter_by(__import__('build123d').Axis.Z,reverse=True)
+ s=s.fillet(min(.8,h/4,r/2),horizontal)
  return Pos(x,y,z)*s
 
 def servo(p):
@@ -29,7 +31,7 @@ def servo(p):
 
 def build(p):
  W,D,H,t=p['base_width'],p['base_depth'],p['base_height'],p['wall']
- top=H+p['lid_thickness'];axis=p['tilt_axis_z'];ax=p['arm_inner_x']
+ top=H+p['lid_thickness'];axis=p['tilt_axis_z'];ax=p['arm_inner_x'];at=p['arm_thickness'];ix=p['idler_arm_inner_x']
  # Fixed bearing shoulder at top+0.5, bearing top at top+7.5.
  bearing_bottom=top+.5;bearing_top=bearing_bottom+p['bearing_height']
  rotary_bottom=bearing_top+3;rotary_top=rotary_bottom+6
@@ -40,9 +42,9 @@ def build(p):
  screws=[(-W/2+7,-D/2+7),(W/2-7,-D/2+7),(-W/2+7,D/2-7),(W/2-7,D/2-7)]
  parts={};hardware={}
  # Open base; detachable lid. Nonconductive rails capture the ESP32 by its PCB edges.
- base=rounded(W,D,H,8)-rounded(W-2*t,D-2*t,H,5,z=t)
+ base=rounded(W,D,H,14)-rounded(W-2*t,D-2*t,H,11,z=t)
  # Subtle perimeter seam and recessed front wordmark for a finished product look.
- base-=rounded(W+2,D+2,1.2,8,z=H-7)-rounded(W-1.2,D-1.2,2,7.4,z=H-7.4)
+ base-=rounded(W+2,D+2,1.2,14,z=H-7)-rounded(W-1.2,D-1.2,2,13.4,z=H-7.4)
  from build123d import Text,extrude
  word=extrude(Text('CAMX',font_size=7,font='DejaVu Sans',align=(Align.CENTER,Align.CENTER)),amount=.8)
  base-=Pos(0,-D/2+.6,23)*Rot(90,0,0)*word
@@ -95,9 +97,9 @@ def build(p):
  # Air slots on front, keeping electronics above the openings.
  for x in [-20,-10,0,10,20]:base-=box(5,t+4,3,x,-D/2,9)
  parts['base']=base
- lid=rounded(W,D,p['lid_thickness'],8,z=H)
+ lid=rounded(W,D,p['lid_thickness'],14,z=H)
  # Thin locating lip outside hardware, interrupted only by lid screw bosses.
- lip=rounded(W-2*t-.6,D-2*t-.6,2,5,z=H-2)-rounded(W-2*t-4.6,D-2*t-4.6,3,4,z=H-2.5)
+ lip=rounded(W-2*t-.6,D-2*t-.6,2,11,z=H-2)-rounded(W-2*t-4.6,D-2*t-4.6,3,10,z=H-2.5)
  for x,y in screws:lip-=cyl(10,4,x,y,H-3)
  lid+=lip
  lid+=cyl(p['bearing_od']+8,p['bearing_height']+.5,z=top)
@@ -119,7 +121,8 @@ def build(p):
  parts['lid']=lid;parts['bearing_retainer']=ret
  # Bearing-supported rotating L arm. Stock horn sits in bottom pocket; no printed spline.
  platform=cyl(68,6,z=rotary_bottom)
- platform+=box(ax+2,24,6,(ax+2)/2,0,rotary_bottom)
+ platform+=rounded(ax+at+10-(ix-10),32,6,6,(ax+at+10+ix-10)/2,0,rotary_bottom)
+ for y in [-10,10]:platform-=cyl(2.6,8,ix-5,y,rotary_bottom-1)
  platform+=cyl(p['bearing_id']-.2,rotary_bottom-stem_bottom,z=stem_bottom)
  platform+=cyl(p['bearing_id']+6,rotary_bottom-bearing_top-.2,z=bearing_top+.2)
  platform-=box(p['horn_width']+.4,p['horn_length']+.4,p['horn_thickness']+.4,z=stem_bottom-.1)
@@ -133,28 +136,49 @@ def build(p):
   platform-=cyl(1.8,10,x,0,stem_bottom-.1)
  parts['spindle_keeper']=keeper
  # Main single upright, with rounded top and a removable outward-facing servo hood.
- upright=rounded(4,26,axis+24-rotary_top,1.6,ax+2,0,rotary_top-.1)
+ upright=rounded(at,28,axis+24-rotary_top,2.2,ax+at/2,0,rotary_top-.1)
  platform+=upright
+ from build123d import Plane,Polygon,extrude
+ for y in [-10,14]:
+  rib=extrude(Plane.XZ*Polygon((ax+at-.2,rotary_bottom),(ax+at+9,rotary_bottom),(ax+at-.2,rotary_top+25),align=None),amount=4)
+  platform+=Pos(0,y,0)*rib
  # Tilt SG90 rotated so its shaft points inward (-X), its flange is held against arm outside.
- tilt_origin_x=ax+6+p['servo_flange_z']
+ tilt_origin_x=ax+at+2+p['servo_flange_z']
  tilt_origin_z=axis-p['servo_shaft_offset_x']
  body_center_z=tilt_origin_z
- platform-=box(8,p['servo_width']+.7,p['servo_length']+.7,ax+2,0,body_center_z-p['servo_length']/2-.35)
+ platform-=box(at+4,p['servo_width']+.7,p['servo_length']+.7,ax+at/2,0,body_center_z-p['servo_length']/2-.35)
  for dz in [-p['servo_mount_pitch']/2,p['servo_mount_pitch']/2]:
-  platform-=xhole(2.3,10,ax-2,0,body_center_z+dz)
+  platform-=xhole(2.3,at+6,ax-2,0,body_center_z+dz)
+  platform-=xhole(4.5,1.8,ax,0,body_center_z+dz)
  # Hood screw pads on the arm side, below/above servo; wires route at the foot.
  for z in [axis-24,axis+23]:
-  platform+=box(4,26,5,ax+2,0,z-2.5)
+  platform+=rounded(at,28,5,1,ax+at/2,0,z-2.5)
   for y in [-9,9]:platform-=xhole(1.8,10,ax-1,y,z)
  parts['pan_arm']=platform
- cover_x=ax+4;cover_len=p['servo_flange_z']+4
- cover=rounded(cover_len,26,53,2,cover_x+cover_len/2,0,axis-27)
+ cover_x=ax+at;cover_len=p['servo_flange_z']+4
+ cover=rounded(cover_len,28,53,4,cover_x+cover_len/2,0,axis-27)
  cover-=rounded(cover_len,21,47,1.5,cover_x+cover_len/2-2,0,axis-24)
  for z in [axis-24,axis+23]:
   for y in [-9,9]:cover-=xhole(2.3,cover_len+3,cover_x-1,y,z)
  cover-=box(9,8,8,cover_x+6,0,axis-29)
  for z in [axis-8,axis,axis+8]:cover-=box(5,12,2,cover_x+cover_len-1,0,z)
+ cover-=platform # relieve gusset tips at the removable hood interface
  parts['tilt_cover']=cover
+ # Opposite idler support: 625 bearing (5x16x5), metal M5 axle, removable retainer.
+ idler=rounded(13,34,8,3,ix-5,0,rotary_top)
+ idler+=rounded(6,28,axis+13-rotary_top,2.2,ix-3,0,rotary_top)
+ idler+=xhole(24,6,ix-6,0,axis)
+ idler-=xhole(9,10,ix-7,0,axis)
+ bearing_x=ix-6
+ idler-=xhole(p['idler_bearing_od']+.3,p['idler_bearing_width']+.1,bearing_x-.1,0,axis)
+ for y in [-10,10]:
+  idler-=cyl(3.3,12,ix-5,y,rotary_top-1)
+  idler-=cyl(6.4,2.1,ix-5,y,rotary_top+6)
+ for z in [axis-9,axis+9]:idler-=xhole(1.8,10,ix-7,0,z)
+ parts['idler_arm']=idler
+ ir=xhole(24,2,bearing_x-2,0,axis)-xhole(p['idler_bearing_od']-2,4,bearing_x-3,0,axis)
+ for z in [axis-9,axis+9]:ir-=xhole(2.3,4,bearing_x-3,0,z)
+ parts['idler_bearing_retainer']=ir
  # Cradle shelf and swept quarter-round rib along one side: matches the curved sketch.
  shelfz=p['camera_bottom_z']-10;cw=p['camera_width'];depth=p['camera_depth']+4
  cradle=rounded(cw+8,depth,5,3,z=shelfz)
@@ -166,18 +190,24 @@ def build(p):
  inner=Pos(inner_x-radius,-8,elbow_z)*Rot(-90,0,0)*Cylinder(radius,16,align=MIN)
  arc=(outer-inner)&box(radius+6,18,radius+6,inner_x-radius+(radius+6)/2,0,elbow_z-radius-6)
  cradle+=arc
- cradle+=box(5,14,axis-elbow_z+1,inner_x+2.5,0,elbow_z-.5)
+ cradle+=rounded(5,14,axis-elbow_z+1,1,inner_x+2.5,0,elbow_z-.5)
  # Connect curve to tilt hub on inner side of upright, with stock horn recess facing +X.
  horn_plane=tilt_origin_x-p['servo_shaft_z']
  hubx=horn_plane-4
- cradle+=box(hubx+5-inner_x,14,6,(inner_x+hubx+5)/2,0,axis-3)
+ cradle+=rounded(hubx+5-inner_x,14,6,1,(inner_x+hubx+5)/2,0,axis-3)
  cradle+=xhole(12,5,hubx,0,axis)
  cradle-=xhole(5,16,hubx-8,0,axis)
  for dz in [-p['horn_screw_pitch']/2,p['horn_screw_pitch']/2]:
   # Extend vertical web locally so horn attachment screws have printed material.
-  cradle+=box(4,10,7,hubx+1,0,axis+dz-3.5)
+  cradle+=rounded(4,10,7,.8,hubx+1,0,axis+dz-3.5)
   cradle-=xhole(2.2,12,hubx-4,0,axis+dz)
  cradle-=box(p['horn_thickness']+.4,p['horn_width']+.4,p['horn_length']+.4,horn_plane-.8,0,axis-p['horn_length']/2-.2)
+ # Left cradle cheek receives the metal idler bolt and recessed M5 hex nut.
+ left_outer=ix+2
+ cradle+=rounded(5,14,axis+8-shelfz,1.8,left_outer+2.5,0,shelfz)
+ cradle-=xhole(5.3,10,left_outer-1,0,axis)
+ hexnut=Pos(left_outer+1.4,0,axis)*Rot(0,90,0)*extrude(__import__('build123d').RegularPolygon(8.3/math.sqrt(3),6),amount=5.5)
+ cradle-=hexnut
  # Camera bolt slot gives +/-8 mm fore-aft balance adjustment; underside head recess.
  ty=p['camera_thread_y']
  slot=box(6.8,16,14,0,ty,shelfz-1)+cyl(6.8,14,0,ty-8,shelfz-1)+cyl(6.8,14,0,ty+8,shelfz-1)
@@ -185,6 +215,7 @@ def build(p):
  cradle-=box(12,27,2.5,0,ty,shelfz-.1)
  # Cable ties secure camera cable on cradle rear edge, outside lens/mic envelope.
  for x in [-15,15]:cradle-=box(3,3,8,x,depth/2-5,shelfz-1)
+ cradle-=box(20,40,100,ax+10-.4,0,shelfz-1) # maintain gap to the thicker upright
  parts['camera_cradle']=cradle
  # Small fit coupon: first print this to check bearing, servo cavity, horn, USB and cap.
  coupon=box(105,68,3)
@@ -205,17 +236,34 @@ def build(p):
  hardware['usb_flange_envelope']=box(p['usb_flange_width'],2,p['usb_flange_height'],usb_x,D/2+1,usb_z-p['usb_flange_height']/2)
  camera=Box(cw,p['camera_depth'],p['camera_height'],align=MIN)
  camera=camera.fillet(4,camera.edges())
+ hardware['idler_bearing_625']=xhole(p['idler_bearing_od'],p['idler_bearing_width'],bearing_x,0,axis)-xhole(p['idler_bearing_id'],p['idler_bearing_width']+2,bearing_x-1,0,axis)
+ hardware['idler_spacer']=xhole(7.5,p['idler_spacer_length'],bearing_x+p['idler_bearing_width'],0,axis)-xhole(5.2,p['idler_spacer_length']+2,bearing_x+p['idler_bearing_width']-1,0,axis)
+ hardware['idler_outer_washers']=xhole(7.5,2,bearing_x-2,0,axis)-xhole(5.2,4,bearing_x-3,0,axis)
+ hardware['idler_axle_M5']=xhole(5,16,bearing_x-2,0,axis)+xhole(8.5,3.5,bearing_x-5.5,0,axis)
  hardware['camera_envelope']=Pos(0,0,p['camera_bottom_z'])*camera
  hardware['camera_lens']=yhole(23,2,0,-p['camera_depth']/2-2,p['camera_bottom_z']+p['camera_height']/2)
  meta={'bearing_bottom_z':bearing_bottom,'bearing_top_z':bearing_top,'rotary_bottom_z':rotary_bottom,'tilt_axis':[0,0,axis], 'pan_servo_origin':[pan_body_x,0,pan_origin_z], 'tilt_servo_origin':[tilt_origin_x,0,tilt_origin_z], 'horn_plane_x':horn_plane}
+ # Small finishing fillets on long straight edges; leave circular bearing/thread interfaces intact.
+ finish={}
+ for name in ['pan_arm','camera_cradle','idler_arm','tilt_cover']:
+  shape=parts[name];edges=[e for e in shape.edges() if e.geom_type==GeomType.LINE and e.length>15]
+  finish[name]=0
+  for radius in [min(.6,p.get("edge_radius",1.2)/2),.35,.2]:
+   try:
+    softened=shape.fillet(radius,edges)
+    if softened.is_valid and len(softened.solids())==1:
+     parts[name]=softened;finish[name]=radius;break
+   except Exception:pass
+ meta['finishing_fillet_mm']=finish
  return parts,hardware,meta
 
-COLORS={'base':'#263746','lid':'#445b69','pan_arm':'#427f8c','camera_cradle':'#dbac65','tilt_cover':'#3a586a','bearing_retainer':'#acb9c1','spindle_keeper':'#acb9c1','fit_coupon':'#dbac65','tripod_nut_retainer':'#acb9c1'}
+COLORS={'base':'#263746','lid':'#445b69','pan_arm':'#427f8c','camera_cradle':'#dbac65','tilt_cover':'#3a586a','bearing_retainer':'#acb9c1','spindle_keeper':'#acb9c1','fit_coupon':'#dbac65','tripod_nut_retainer':'#acb9c1','idler_arm':'#427f8c','idler_bearing_retainer':'#acb9c1'}
 def colored(shape,name,color):
  result=copy(shape);result.label=name;result.color=Color(color);return result
 
 def print_pose(name,shape):
  if name=='pan_arm':shape=Rot(0,90,0)*shape # upright side flat; spindle needs local support
+ if name in ['idler_arm','idler_bearing_retainer']:shape=Rot(0,-90,0)*shape
  if name=='camera_cradle':shape=Rot(0,-90,0)*shape # curved rib on bed, shelf vertical
  if name=='tilt_cover':shape=Rot(0,-90,0)*shape # closed outward face down
  bb=shape.bounding_box();return Pos(-bb.center().X,-bb.center().Y,-bb.min.Z)*shape
@@ -230,7 +278,7 @@ def main():
  parser=argparse.ArgumentParser();parser.add_argument('--params',type=Path,default=ROOT/'cad/parameters.json');parser.add_argument('--out',type=Path,default=ROOT/'exports');args=parser.parse_args()
  p=json.loads(args.params.read_text());parts,hardware,meta=build(p);out=args.out
  for folder in ['parts','assembly','images','drawings']: (out/folder).mkdir(parents=True,exist_ok=True)
- report={'units':'mm','parameters':p,'datums':meta,'parts':{},'prototype_status':'DIMENSIONS UNCONFIRMED; BENCH FIT REQUIRED'}
+ report={'units':'mm','parameters':p,'datums':meta,'parts':{},'prototype_status':'BEARING-ASSISTED PROTOTYPE; DIMENSIONS UNCONFIRMED; BENCH FIT REQUIRED','hardware':list(hardware)}
  printing=[]
  for i,(name,shape) in enumerate(parts.items()):
   if not shape.is_valid or len(shape.solids())!=1:raise RuntimeError(f'{name}: invalid or disconnected solid ({len(shape.solids())})')

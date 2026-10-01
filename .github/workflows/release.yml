@@ -1,0 +1,109 @@
+name: Build & release
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: viewer/package-lock.json
+      - name: Cache PlatformIO toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini', 'requirements.txt') }}
+      - name: Install CAD and firmware tools
+        run: |
+          python -m pip install -r requirements.txt
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-dejavu-core libgl1 libglu1-mesa libxrender1 libxext6
+      - name: Build ESP32 firmware
+        run: pio run -d firmware
+      - name: Verify motion logic
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Ifirmware/include tests/motion_test.cpp -o /tmp/camx-motion-test
+          /tmp/camx-motion-test
+      - name: Generate CAD and verify printable geometry
+        run: |
+          python cad/model.py
+          python tests/validate_cad.py
+          python tools/diagrams.py
+          python tools/package.py
+      - name: Build 3D studio
+        working-directory: viewer
+        run: |
+          npm ci
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Verify desktop, mobile and download flows
+        working-directory: viewer
+        env:
+          CAMX_QA_URL: http://127.0.0.1:4173/camx/
+        run: |
+          mkdir -p /tmp/camx-site
+          ln -s "$GITHUB_WORKSPACE/viewer/dist" /tmp/camx-site/camx
+          python -m http.server 4173 --bind 127.0.0.1 --directory /tmp/camx-site > /tmp/camx-http.log 2>&1 &
+          trap 'kill $!' EXIT
+          node scripts/qa.mjs
+          node scripts/render-cad.mjs
+      - name: Package release assets
+        run: |
+          python tools/image_formats.py
+          python tools/package.py
+          npm --prefix viewer run build
+          python tools/build_release.py
+      - name: Upload downloadable release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: camx-release-files
+          path: release/*
+          retention-days: 30
+          if-no-files-found: error
+      - name: Upload validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: camx-validation
+          path: |
+            exports/validation.json
+            docs/design/viewer-qa.json
+            docs/design/viewer-desktop.png
+            docs/design/viewer-mobile.png
+          retention-days: 30
+  publish:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: camx-release-files
+          path: release
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" release/*.zip release/checksums.sha256 \
+            --verify-tag --title "CAMX $RELEASE_TAG 📷" --notes-file release/RELEASE_NOTES.md

@@ -46,7 +46,14 @@
     "bearing_od": 37.0,
     "bearing_height": 7.0,
     "pan_limit_deg": 60.0,
-    "tilt_limit_deg": 25.0
+    "tilt_limit_deg": 25.0,
+    "arm_thickness": 6.0,
+    "edge_radius": 1.2,
+    "idler_arm_inner_x": -36.0,
+    "idler_bearing_id": 5.0,
+    "idler_bearing_od": 16.0,
+    "idler_bearing_width": 5.0,
+    "idler_spacer_length": 3.0
   },
   "datums": {
     "bearing_bottom_z": 44.5,
@@ -63,11 +70,17 @@
       15.299999999999997
     ],
     "tilt_servo_origin": [
-      64.0,
+      66.0,
       0,
       115.0
     ],
-    "horn_plane_x": 35.0
+    "horn_plane_x": 37.0,
+    "finishing_fillet_mm": {
+      "pan_arm": 0,
+      "camera_cradle": 0,
+      "idler_arm": 0,
+      "tilt_cover": 0.6
+    }
   },
   "parts": {
     "tripod_nut_retainer": {
@@ -81,7 +94,7 @@
       "valid": true
     },
     "base": {
-      "volume_mm3": 86541.834,
+      "volume_mm3": 82664.413,
       "print_bounds_mm": [
         108.0,
         88.0,
@@ -91,7 +104,7 @@
       "valid": true
     },
     "lid": {
-      "volume_mm3": 39194.397,
+      "volume_mm3": 38609.459,
       "print_bounds_mm": [
         108.0,
         88.0,
@@ -121,31 +134,51 @@
       "valid": true
     },
     "pan_arm": {
-      "volume_mm3": 33755.119,
+      "volume_mm3": 43777.188,
       "print_bounds_mm": [
         91.2,
         68.0,
-        75.0
+        99.0
       ],
       "solids": 1,
       "valid": true
     },
     "tilt_cover": {
-      "volume_mm3": 11027.549,
+      "volume_mm3": 13096.947,
       "print_bounds_mm": [
         53.0,
-        26.0,
+        28.0,
         25.0
       ],
       "solids": 1,
       "valid": true
     },
+    "idler_arm": {
+      "volume_mm3": 10955.225,
+      "print_bounds_mm": [
+        62.5,
+        34.0,
+        13.0
+      ],
+      "solids": 1,
+      "valid": true
+    },
+    "idler_bearing_retainer": {
+      "volume_mm3": 580.284,
+      "print_bounds_mm": [
+        24.0,
+        24.0,
+        2.0
+      ],
+      "solids": 1,
+      "valid": true
+    },
     "camera_cradle": {
-      "volume_mm3": 31544.713,
+      "volume_mm3": 34139.7,
       "print_bounds_mm": [
         48.5,
         59.0,
-        67.5
+        70.6
       ],
       "solids": 1,
       "valid": true
@@ -161,5 +194,20 @@
       "valid": true
     }
   },
-  "prototype_status": "DIMENSIONS UNCONFIRMED; BENCH FIT REQUIRED"
+  "prototype_status": "BEARING-ASSISTED PROTOTYPE; DIMENSIONS UNCONFIRMED; BENCH FIT REQUIRED",
+  "hardware": [
+    "pan_servo",
+    "tilt_servo",
+    "bearing_6805",
+    "esp32_envelope",
+    "capacitor_envelope",
+    "usb_pcb_envelope",
+    "usb_flange_envelope",
+    "idler_bearing_625",
+    "idler_spacer",
+    "idler_outer_washers",
+    "idler_axle_M5",
+    "camera_envelope",
+    "camera_lens"
+  ]
 }

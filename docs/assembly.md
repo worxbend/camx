@@ -15,6 +15,12 @@ Edit `cad/parameters.json`, regenerate, and rerun checks. Fit clearance is per r
 | ESP32-WROOM-32 DevKit | 1 | Pictured USB-C version; 5 V input verified on actual board |
 | Positional SG90-type servo | 2 | Stock spline-matching horns and center screws |
 | 6805 bearing | 1 | 25 mm ID × 37 mm OD × 7 mm height |
+| 625 bearing | 1 | 5 mm ID × 16 mm OD × 5 mm width, opposite tilt support |
+| M5 × 16 axle screw + M5 nut | 1 set | Low head preferred; measure actual stack and camera clearance |
+| M5 washers + spacer | 2 × 1 mm washers, 1 × 3 mm spacer | OD ≤7.5 mm, spacer ID ≥5.2 mm; contact bearing inner race only |
+| M3 × 12 screws | 2 | Opposite arm foot into platform pilot holes |
+| M2 × 10 screws | 2 | Opposite bearing retainer into arm pilot holes |
+| M2 nuts | 2 | Tilt-servo ear through-bolts; match actual screw length |
 | Regulated 5 V / 3 A PSU | 1 | Servo power independent of USB programming power |
 | 1000 µF electrolytic | 1 | 10 V or higher rating; default 13 mm diameter × 25 mm height |
 | Panel USB-C board/module | 1 | User-supplied module; see wiring constraints |
@@ -22,7 +28,7 @@ Edit `cad/parameters.json`, regenerate, and rerun checks. Fit clearance is per r
 | M2 × 8 screws | 3 | Bearing outer retainer into lid pilot holes |
 | M2 × 6 screws | 4 | Spindle keeper and tripod nut cap into printed spindle pilot holes |
 | M2 × 8–10 screws | 4 | Horn-to-print, two per horn; stock horn holes drilled to suit |
-| SG90 ear screws | 4 | Usually M2 × 8; verify actual flange and screw type |
+| SG90 ear screws | 4 | Pan stock screws; tilt M2 × 10–12 through-bolts with nuts, verify actual stack |
 | M2 × 30 screws | 4 | Servo hood through to arm; verify length after slicing |
 | M3 screws, nuts and washers | 2 sets | USB flange; length depends on actual flange thickness |
 | Steel 1/4-20 UNC hex nut | 1 | ~11.1 mm across flats, ~5.5 mm thick; fits captive base socket |
@@ -30,7 +36,7 @@ Edit `cad/parameters.json`, regenerate, and rerun checks. Fit clearance is per r
 | Zip ties / insulating tape / adhesive rubber feet | As needed | Electrical insulation, strain relief and desk grip |
 | Normally-open stop button | Optional | GPIO33 to GND, normally high input |
 
-CAMX exports nine printable parts: base, tripod_nut_retainer, lid, bearing_retainer, spindle_keeper, pan_arm, tilt_cover, camera_cradle, fit_coupon. The reference assembly's hardware shapes are envelopes, not parts to print. Screws, horns and cables are documented but not modeled in full detail.
+CAMX exports eleven printable parts: base, tripod_nut_retainer, lid, bearing_retainer, spindle_keeper, pan_arm, tilt_cover, camera_cradle, idler_arm, idler_bearing_retainer, fit_coupon. The reference assembly's hardware shapes are envelopes, not parts to print. Screws, horns and cables are documented but not modeled in full detail.
 
 ## Printing
 
@@ -44,17 +50,18 @@ Print `fit_coupon` first: bearing seat, servo cavity, horn pocket, USB socket an
 2. Install the vertical pan servo on the base's two ear towers, shaft upward. Do not install its horn yet. Insert the ESP32 board edges into the vertical side rails; insulate header pins from other hardware. Use tape or a removable foam wedge for longitudinal retention. Secure the USB board and capacitor using ties, leaving PCB pads and capacitor leads insulated.
 3. Seat the bearing in the lid against its shoulder and install the thin outer retainer with three screws. The pan spindle enters the inner race from above. Attach the keeper from below with two M2 screws; rotate by hand to confirm it does not rub the lid underside.
 4. Fit the actual pan horn in the spindle underside pocket. The design assumes a **24 × 7 × 2 mm straight double-arm horn**, with attachment holes 16 mm apart. Modify the horn parameters/pocket for your supplied horn. Use the original servo center screw, reached through the center of the pan platform, and two horn-to-print screws reached through the outer access holes. Do not substitute printed spline teeth. Verify the horn stays flat without distorting the printed stem.
-5. Install the tilt servo in the upright from the outward/right side. Its shaft faces toward the camera and its body is enclosed by the removable hood. Servo ears seat on the arm outer face. Use the two ear holes and stock screws; the hood is installed last. Clearance and all four hood screw paths should be checked dry before powering.
+5. Install the tilt servo in the upright from the outward/right side. Its shaft faces toward the camera and its body is enclosed by the removable hood. Servo ears seat on the arm outer face. Use the two ear holes with M2 through-bolts and nuts; the hood is installed last. Clearance and all four hood screw paths should be checked dry before powering.
 6. Center both servos using the firmware with horns removed. Support the camera/cradle during every power or PWM disable operation. Set ARM, wait for center pulses, STOP to hold, then fit the pan horn at straight ahead and the tilt horn with the shelf level. Switch off power before completing fastening. A restarted SG90 can jump to its center; smooth motion applies after enabling, not to the unknown startup position.
 7. Put the camera mounting screw through the shelf before attaching the cradle, because the space below the shelf is limited. Fit the tilt horn into the outward-facing cradle recess and secure it to the servo spline with its original screw. The screw is reachable from the inner/left side through the hub. Attach the cradle with two horn screws. Some SG90 horns need trimming/drilling to match the coupon; retain enough material around both holes.
-8. Mount the webcam with a steel 1/4-20 screw through the slot. Shelf stack is nominally 10 mm, with a 2.5 mm head recess; washer and camera thread engagement determine screw length (often about 11–13 mm from under head, but **measure your camera**). There is no printed male camera thread. Use a thin grip pad to resist camera rotation. Keep vents/microphones uncovered. Fold/position the factory clip only if it remains clear during tilt.
-9. Route the tilt cable along the back of the arm and into the lid's rear-side slot. Leave a relaxed pan loop outside the bearing. Secure camera USB to cradle rear tie slots and leave a second loose loop to the stationary host. Never route cables through the bearing or taut across a pivot. Screw on the hood and lid after testing the empty motion envelope.
+8. Fasten the opposite arm to the pan platform with two M3 screws. Seat the 625 bearing in its outside pocket and fit the outer retainer with two M2 screws. Insert the M5 axle from the left through two 1 mm washers, the bearing inner race and a 3 mm spacer, into the cradle cheek and captive M5 nut. Tighten only enough to remove play: the bearing must rotate freely. The spacer must touch only the inner race and clear the printed shoulder. Confirm the axle tip/nut cannot touch the camera. Do not force the cheek sideways to compensate for a poor fit.
+9. Mount the webcam with a steel 1/4-20 screw through the slot. Shelf stack is nominally 10 mm, with a 2.5 mm head recess; washer and camera thread engagement determine screw length (often about 11–13 mm from under head, but **measure your camera**). There is no printed male camera thread. Use a thin grip pad to resist camera rotation. Keep vents/microphones uncovered. Fold/position the factory clip only if it remains clear during tilt.
+10. Route the tilt cable along the back of the arm and into the lid's rear-side slot. Leave a relaxed pan loop outside the bearing. Secure camera USB to cradle rear tie slots and leave a second loose loop to the stationary host. Never route cables through the bearing or taut across a pivot. Screw on the hood and lid after testing the empty motion envelope.
 
 ## Balance and load
 
 The tilt pivot is at Z=110 mm, with the camera bottom at 83 mm. For a 50 mm-high uniform camera, center height is ~108 mm, close to the pivot. Actual CG includes the factory clip, camera screw, printed cradle and cable drag; adjust fore/aft placement in the slot. Calculate gravity torque as `mass_kg × perpendicular_offset_cm` in kgf·cm. For 150 g and a 1 cm offset, static torque is 0.15 kgf·cm before bracket/cable loads. At a 3 cm offset it is 0.45 kgf·cm. Published SG90 1.8 kgf·cm is stall torque, **not continuous torque**. Aim for a well-balanced mechanism with static load below approximately 0.3–0.4 kgf·cm as an engineering starting assumption, then verify temperature/jitter; this is not a manufacturer continuous rating.
 
-The pan bearing supports vertical and overturning loads. Tilt uses the SG90 output shaft as a single-side support, as in the sketch. That servo's plastic bearings/gears remain a durability limitation. For a heavy camera, frequent tracking or strong cable drag, use a stronger servo and a second tilt bearing/support; this requires redesign and revised parameters. Verify stability on the intended tripod/desk; the prototype base is not a monitor clamp.
+The pan bearing supports vertical and overturning loads. Your approved second tilt arm adds a 625 bearing opposite the servo. The main arm is now 6 mm thick with root braces and through-bolted servo ears. This reduces cantilever loading but does not remove the SG90's plastic gears/bearing limitations. Secure the base to a tripod or desk fixture: cable pulls can tip a lightweight freestanding unit. Read the [structural review](structural-review.md) and qualify the assembly with a dummy load before installing the camera.
 
 ## Wiring
 
