@@ -1,0 +1,263 @@
+"""CAMX v1: single-arm gimbal based on the user's photos 7/8.
+Millimetres. Z up, camera looks -Y, tilt about X, pan about Z.
+Hardware dimensions in parameters.json are provisional measured-fit defaults.
+Run from any directory: python cad/model.py [--params path] [--out path].
+"""
+import argparse,json,math
+from copy import copy
+from pathlib import Path
+from build123d import (Box,Cylinder,Pos,Rot,Align,Part,Compound,Color,export_stl,
+ export_step,export_brep,export_gltf,Mesher,ExportSVG,ExportDXF,GeomType)
+ROOT=Path(__file__).resolve().parents[1]
+MIN=(Align.CENTER,Align.CENTER,Align.MIN)
+
+def box(w,d,h,x=0,y=0,z=0): return Pos(x,y,z)*Box(w,d,h,align=MIN)
+def cyl(d,h,x=0,y=0,z=0): return Pos(x,y,z)*Cylinder(d/2,h,align=MIN)
+def xhole(d,length,x,y,z): return Pos(x,y,z)*Rot(0,90,0)*Cylinder(d/2,length,align=MIN)
+def yhole(d,length,x,y,z): return Pos(x,y,z)*Rot(-90,0,0)*Cylinder(d/2,length,align=MIN)
+def rounded(w,d,h,r,x=0,y=0,z=0):
+ s=Box(w,d,h,align=MIN)
+ s=s.fillet(r,s.edges().filter_by(__import__('build123d').Axis.Z))
+ return Pos(x,y,z)*s
+
+def servo(p):
+ s=box(p['servo_length'],p['servo_width'],p['servo_height'])
+ s+=box(p['servo_flange_span'],p['servo_width'],2,z=p['servo_flange_z'])
+ s+=cyl(10,p['servo_shaft_z']-2-p['servo_height'],x=p['servo_shaft_offset_x'],z=p['servo_height'])
+ s+=cyl(4.8,2,x=p['servo_shaft_offset_x'],z=p['servo_shaft_z']-2)
+ return s
+
+def build(p):
+ W,D,H,t=p['base_width'],p['base_depth'],p['base_height'],p['wall']
+ top=H+p['lid_thickness'];axis=p['tilt_axis_z'];ax=p['arm_inner_x']
+ # Fixed bearing shoulder at top+0.5, bearing top at top+7.5.
+ bearing_bottom=top+.5;bearing_top=bearing_bottom+p['bearing_height']
+ rotary_bottom=bearing_top+3;rotary_top=rotary_bottom+6
+ stem_bottom=bearing_bottom-.2
+ pan_origin_z=stem_bottom-p['servo_shaft_z']
+ pan_body_x=-p['servo_shaft_offset_x']
+ flange_top=pan_origin_z+p['servo_flange_z']
+ screws=[(-W/2+7,-D/2+7),(W/2-7,-D/2+7),(-W/2+7,D/2-7),(W/2-7,D/2-7)]
+ parts={};hardware={}
+ # Open base; detachable lid. Nonconductive rails capture the ESP32 by its PCB edges.
+ base=rounded(W,D,H,8)-rounded(W-2*t,D-2*t,H,5,z=t)
+ # Subtle perimeter seam and recessed front wordmark for a finished product look.
+ base-=rounded(W+2,D+2,1.2,8,z=H-7)-rounded(W-1.2,D-1.2,2,7.4,z=H-7.4)
+ from build123d import Text,extrude
+ word=extrude(Text('CAMX',font_size=7,font='DejaVu Sans',align=(Align.CENTER,Align.CENTER)),amount=.8)
+ base-=Pos(0,-D/2+.6,23)*Rot(90,0,0)*word
+ for x,y in screws:
+  base+=cyl(9,H-t,x,y,t)
+  base-=cyl(2.6,H-3,x,y,4) # M3 screws into pilot holes
+ # SG90 mounting ears supported on two towers, with holes from above.
+ for x in [pan_body_x-p['servo_mount_pitch']/2,pan_body_x+p['servo_mount_pitch']/2]:
+  base+=box(7,p['servo_width']+5,flange_top-t,x,0,t)
+  base-=cyl(2.1,12,x,0,flange_top-11)
+ base-=box(p['servo_length']+.7,p['servo_width']+.7,flange_top-t+1,pan_body_x,0,t)
+ # Servo body insertion corridor between towers.
+ # ESP board vertical at left, long axis Y, USB toward -Y.
+ ex=-W/2+t+7;elen=p['esp32_length'];ew=p['esp32_width'];ez=t+2
+ for y in [-elen/2-2,elen/2+2]:
+  base+=box(7,4,ew+3,ex,y,t)
+  base-=box(2.2,5,ew+3,ex,y,ez)
+ # Board foot rest; rail slots allow insulated header pins to face the roomy center.
+ base+=box(7,elen+4,2,ex,0,t)
+ base-=box(16,t+2,12,ex,-D/2,ez+ew/2-6)
+ # USB-C module on rear wall. Flange screws use through holes and loose nuts.
+ usb_x=22;usb_z=18
+ base-=box(p['usb_socket_width'],t+4,p['usb_socket_height'],usb_x,D/2,usb_z-p['usb_socket_height']/2)
+ for dx in [-p['usb_flange_hole_pitch']/2,p['usb_flange_hole_pitch']/2]:
+  base-=yhole(p['usb_flange_hole_diameter'],t+4,usb_x+dx,D/2-t-1,usb_z)
+ # PCB supports leave underside pads clear, retaining with zip tie through floor.
+ for x in [usb_x-p['usb_pcb_width']/2-1,usb_x+p['usb_pcb_width']/2+1]:
+  base+=box(2,p['usb_pcb_depth'],usb_z-3-t,x,D/2-t-p['usb_pcb_depth']/2,t)
+  for y in [D/2-t-5,D/2-t-p['usb_pcb_depth']+4]:
+   base-=box(3,3,t+2,x,y,-1)
+ # Separate regulated PSU cable through right wall, away from the USB board.
+ base-=xhole(p['power_cable_diameter']+1,t+4,W/2-t-1,-22,13)
+ for y in [-28,-16]:base-=box(3,3,t+2,W/2-t-8,y,-1)
+ # Capacitor cup with lead passage, plus two zip-tie floor slots.
+ cx,cy=25,-25;cd=p['capacitor_diameter']+p['fit_clearance']*2
+ base+=cyl(cd+4,8,cx,cy,t)-cyl(cd,9,cx,cy,t+1)
+ base-=cyl(6,t+3,cx,cy,-1)
+ for dx in [-cd/2-3,cd/2+3]:base-=box(2,5,t+2,cx+dx,cy,-1)
+ # Steel tripod nut sits 1 mm above underside; separate cap prevents it floating.
+ base+=cyl(20,3.6,0,0,t)
+ base-=cyl(6.8,14,0,0,-1)
+ nut=Pos(0,0,1)*__import__('build123d').extrude(__import__('build123d').RegularPolygon(11.5/math.sqrt(3),6),amount=7)
+ base-=nut
+ nutcap=cyl(19,2,z=6.6)-cyl(6.8,4,z=5.6)
+ nutcap-=box(20,p['servo_width']+5,4,pan_body_x-p['servo_mount_pitch']/2+3.5-10,0,5.6)
+ for y in [-7.3,7.3]:
+  base-=cyl(1.8,6,0,y,1)
+  nutcap-=cyl(2.3,4,0,y,5.6)
+ parts['tripod_nut_retainer']=nutcap
+ # Air slots on front, keeping electronics above the openings.
+ for x in [-20,-10,0,10,20]:base-=box(5,t+4,3,x,-D/2,9)
+ parts['base']=base
+ lid=rounded(W,D,p['lid_thickness'],8,z=H)
+ # Thin locating lip outside hardware, interrupted only by lid screw bosses.
+ lip=rounded(W-2*t-.6,D-2*t-.6,2,5,z=H-2)-rounded(W-2*t-4.6,D-2*t-4.6,3,4,z=H-2.5)
+ for x,y in screws:lip-=cyl(10,4,x,y,H-3)
+ lid+=lip
+ lid+=cyl(p['bearing_od']+8,p['bearing_height']+.5,z=top)
+ lid-=cyl(p['bearing_id']+.8,25,z=H-3)
+ lid-=cyl(p['bearing_id']+6.6,bearing_bottom-H+3,z=H-3)
+ lid-=cyl(p['bearing_od']+p['fit_clearance'],p['bearing_height']+3,z=bearing_bottom)
+ for x,y in screws:
+  lid-=cyl(3.3,10,x,y,H-3);lid-=cyl(6.4,2.1,x,y,top-2)
+ # Tilt servo wire pass-through exits outside bearing & away from stationary board.
+ lid-=box(9,5,10,20,-19,H-3)
+ parts['lid']=lid
+ # Outer bearing retainer: three screws into lid bearing-boss flange.
+ rr=(p['bearing_od']+4)/2
+ ret=cyl(p['bearing_od']+8,2,z=bearing_top+.2)-cyl(p['bearing_od']-2,4,z=bearing_top-1)
+ for deg in [90,210,330]:
+  x,y=rr*math.cos(math.radians(deg)),rr*math.sin(math.radians(deg))
+  ret-=cyl(2.3,4,x,y,bearing_top-.5)
+  lid-=cyl(1.8,12,x,y,top)
+ parts['lid']=lid;parts['bearing_retainer']=ret
+ # Bearing-supported rotating L arm. Stock horn sits in bottom pocket; no printed spline.
+ platform=cyl(68,6,z=rotary_bottom)
+ platform+=box(ax+2,24,6,(ax+2)/2,0,rotary_bottom)
+ platform+=cyl(p['bearing_id']-.2,rotary_bottom-stem_bottom,z=stem_bottom)
+ platform+=cyl(p['bearing_id']+6,rotary_bottom-bearing_top-.2,z=bearing_top+.2)
+ platform-=box(p['horn_width']+.4,p['horn_length']+.4,p['horn_thickness']+.4,z=stem_bottom-.1)
+ platform-=cyl(5,30,z=stem_bottom-1)
+ for y in [-p['horn_screw_pitch']/2,p['horn_screw_pitch']/2]:
+  platform-=cyl(2.2,25,0,y,stem_bottom-1);platform-=cyl(4.5,3,0,y,rotary_top-2.9)
+ # Keeper screwed below inner race prevents lift, with .2 mm axial clearance.
+ keeper=cyl(p['bearing_id']+6,2,z=bearing_bottom-2.2)-cyl(18,4,z=bearing_bottom-3)
+ for x in [-10.5,10.5]:
+  keeper-=cyl(2.3,5,x,0,bearing_bottom-3)
+  platform-=cyl(1.8,10,x,0,stem_bottom-.1)
+ parts['spindle_keeper']=keeper
+ # Main single upright, with rounded top and a removable outward-facing servo hood.
+ upright=rounded(4,26,axis+24-rotary_top,1.6,ax+2,0,rotary_top-.1)
+ platform+=upright
+ # Tilt SG90 rotated so its shaft points inward (-X), its flange is held against arm outside.
+ tilt_origin_x=ax+6+p['servo_flange_z']
+ tilt_origin_z=axis-p['servo_shaft_offset_x']
+ body_center_z=tilt_origin_z
+ platform-=box(8,p['servo_width']+.7,p['servo_length']+.7,ax+2,0,body_center_z-p['servo_length']/2-.35)
+ for dz in [-p['servo_mount_pitch']/2,p['servo_mount_pitch']/2]:
+  platform-=xhole(2.3,10,ax-2,0,body_center_z+dz)
+ # Hood screw pads on the arm side, below/above servo; wires route at the foot.
+ for z in [axis-24,axis+23]:
+  platform+=box(4,26,5,ax+2,0,z-2.5)
+  for y in [-9,9]:platform-=xhole(1.8,10,ax-1,y,z)
+ parts['pan_arm']=platform
+ cover_x=ax+4;cover_len=p['servo_flange_z']+4
+ cover=rounded(cover_len,26,53,2,cover_x+cover_len/2,0,axis-27)
+ cover-=rounded(cover_len,21,47,1.5,cover_x+cover_len/2-2,0,axis-24)
+ for z in [axis-24,axis+23]:
+  for y in [-9,9]:cover-=xhole(2.3,cover_len+3,cover_x-1,y,z)
+ cover-=box(9,8,8,cover_x+6,0,axis-29)
+ for z in [axis-8,axis,axis+8]:cover-=box(5,12,2,cover_x+cover_len-1,0,z)
+ parts['tilt_cover']=cover
+ # Cradle shelf and swept quarter-round rib along one side: matches the curved sketch.
+ shelfz=p['camera_bottom_z']-10;cw=p['camera_width'];depth=p['camera_depth']+4
+ cradle=rounded(cw+8,depth,5,3,z=shelfz)
+ cradle+=rounded(cw-8,depth-6,5,2,z=shelfz+5)
+ # Small rounded elbow below the camera; straight web clears the camera body.
+ inner_x=cw/2+3;radius=8;elbow_z=shelfz+13
+ if axis < elbow_z+4:raise ValueError('tilt axis too low for the curved cradle')
+ outer=Pos(inner_x-radius,-7,elbow_z)*Rot(-90,0,0)*Cylinder(radius+5,14,align=MIN)
+ inner=Pos(inner_x-radius,-8,elbow_z)*Rot(-90,0,0)*Cylinder(radius,16,align=MIN)
+ arc=(outer-inner)&box(radius+6,18,radius+6,inner_x-radius+(radius+6)/2,0,elbow_z-radius-6)
+ cradle+=arc
+ cradle+=box(5,14,axis-elbow_z+1,inner_x+2.5,0,elbow_z-.5)
+ # Connect curve to tilt hub on inner side of upright, with stock horn recess facing +X.
+ horn_plane=tilt_origin_x-p['servo_shaft_z']
+ hubx=horn_plane-4
+ cradle+=box(hubx+5-inner_x,14,6,(inner_x+hubx+5)/2,0,axis-3)
+ cradle+=xhole(12,5,hubx,0,axis)
+ cradle-=xhole(5,16,hubx-8,0,axis)
+ for dz in [-p['horn_screw_pitch']/2,p['horn_screw_pitch']/2]:
+  # Extend vertical web locally so horn attachment screws have printed material.
+  cradle+=box(4,10,7,hubx+1,0,axis+dz-3.5)
+  cradle-=xhole(2.2,12,hubx-4,0,axis+dz)
+ cradle-=box(p['horn_thickness']+.4,p['horn_width']+.4,p['horn_length']+.4,horn_plane-.8,0,axis-p['horn_length']/2-.2)
+ # Camera bolt slot gives +/-8 mm fore-aft balance adjustment; underside head recess.
+ ty=p['camera_thread_y']
+ slot=box(6.8,16,14,0,ty,shelfz-1)+cyl(6.8,14,0,ty-8,shelfz-1)+cyl(6.8,14,0,ty+8,shelfz-1)
+ cradle-=slot
+ cradle-=box(12,27,2.5,0,ty,shelfz-.1)
+ # Cable ties secure camera cable on cradle rear edge, outside lens/mic envelope.
+ for x in [-15,15]:cradle-=box(3,3,8,x,depth/2-5,shelfz-1)
+ parts['camera_cradle']=cradle
+ # Small fit coupon: first print this to check bearing, servo cavity, horn, USB and cap.
+ coupon=box(105,68,3)
+ coupon+=cyl(p['bearing_od']+5,7,-29,7,3)-cyl(p['bearing_od']+.3,9,-29,7,2.5)
+ coupon-=box(p['servo_length']+.7,p['servo_width']+.7,5,19,15,-1)
+ coupon-=box(p['horn_width']+.4,p['horn_length']+.4,5,42,11,-1)
+ coupon+=cyl(cd+4,7,10,-18,3)-cyl(cd,9,10,-18,2.5)
+ coupon-=box(p['usb_socket_width'],p['usb_socket_height'],5,-25,-23,-1)
+ for dx in [-p['usb_flange_hole_pitch']/2,p['usb_flange_hole_pitch']/2]:coupon-=cyl(p['usb_flange_hole_diameter'],5,-25+dx,-23,-1)
+ parts['fit_coupon']=coupon
+ # Non-print hardware envelopes, intentionally simplified and labelled.
+ hardware['pan_servo']=Pos(pan_body_x,0,pan_origin_z)*servo(p)
+ hardware['tilt_servo']=Pos(tilt_origin_x,0,tilt_origin_z)*Rot(0,-90,0)*servo(p)
+ hardware['bearing_6805']=cyl(p['bearing_od'],p['bearing_height'],z=bearing_bottom)-cyl(p['bearing_id'],p['bearing_height']+2,z=bearing_bottom-1)
+ hardware['esp32_envelope']=box(1.6,elen,ew,ex,0,ez)+box(p['esp32_thickness_envelope']-2,elen-8,ew-4,ex+p['esp32_thickness_envelope']/2-1,0,ez+2)
+ hardware['capacitor_envelope']=cyl(p['capacitor_diameter'],p['capacitor_height'],cx,cy,t+1)
+ hardware['usb_pcb_envelope']=box(p['usb_pcb_width'],p['usb_pcb_depth'],2,usb_x,D/2-t-p['usb_pcb_depth']/2,usb_z-3)
+ hardware['usb_flange_envelope']=box(p['usb_flange_width'],2,p['usb_flange_height'],usb_x,D/2+1,usb_z-p['usb_flange_height']/2)
+ camera=Box(cw,p['camera_depth'],p['camera_height'],align=MIN)
+ camera=camera.fillet(4,camera.edges())
+ hardware['camera_envelope']=Pos(0,0,p['camera_bottom_z'])*camera
+ hardware['camera_lens']=yhole(23,2,0,-p['camera_depth']/2-2,p['camera_bottom_z']+p['camera_height']/2)
+ meta={'bearing_bottom_z':bearing_bottom,'bearing_top_z':bearing_top,'rotary_bottom_z':rotary_bottom,'tilt_axis':[0,0,axis], 'pan_servo_origin':[pan_body_x,0,pan_origin_z], 'tilt_servo_origin':[tilt_origin_x,0,tilt_origin_z], 'horn_plane_x':horn_plane}
+ return parts,hardware,meta
+
+COLORS={'base':'#263746','lid':'#445b69','pan_arm':'#427f8c','camera_cradle':'#dbac65','tilt_cover':'#3a586a','bearing_retainer':'#acb9c1','spindle_keeper':'#acb9c1','fit_coupon':'#dbac65','tripod_nut_retainer':'#acb9c1'}
+def colored(shape,name,color):
+ result=copy(shape);result.label=name;result.color=Color(color);return result
+
+def print_pose(name,shape):
+ if name=='pan_arm':shape=Rot(0,90,0)*shape # upright side flat; spindle needs local support
+ if name=='camera_cradle':shape=Rot(0,-90,0)*shape # curved rib on bed, shelf vertical
+ if name=='tilt_cover':shape=Rot(0,-90,0)*shape # closed outward face down
+ bb=shape.bounding_box();return Pos(-bb.center().X,-bb.center().Y,-bb.min.Z)*shape
+
+def projection(shape,path,eye,up=(0,0,1)):
+ visible,hidden=Part(shape.wrapped).project_to_viewport(eye,viewport_up=up,look_at=shape.bounding_box().center())
+ svg=ExportSVG(margin=5,line_weight=.18,line_color='#263746')
+ svg.add_layer('visible');svg.add_shape(visible,'visible');svg.write(path.with_suffix('.svg'))
+ dxf=ExportDXF();dxf.add_layer('visible');dxf.add_shape(visible,'visible');dxf.write(path.with_suffix('.dxf'))
+
+def main():
+ parser=argparse.ArgumentParser();parser.add_argument('--params',type=Path,default=ROOT/'cad/parameters.json');parser.add_argument('--out',type=Path,default=ROOT/'exports');args=parser.parse_args()
+ p=json.loads(args.params.read_text());parts,hardware,meta=build(p);out=args.out
+ for folder in ['parts','assembly','images','drawings']: (out/folder).mkdir(parents=True,exist_ok=True)
+ report={'units':'mm','parameters':p,'datums':meta,'parts':{},'prototype_status':'DIMENSIONS UNCONFIRMED; BENCH FIT REQUIRED'}
+ printing=[]
+ for i,(name,shape) in enumerate(parts.items()):
+  if not shape.is_valid or len(shape.solids())!=1:raise RuntimeError(f'{name}: invalid or disconnected solid ({len(shape.solids())})')
+  s=colored(shape,name,COLORS[name]);placed=print_pose(name,s);dest=out/'parts'/name
+  export_stl(placed,str(dest.with_suffix('.stl')),tolerance=.08,angular_tolerance=.15)
+  mesh=Mesher();mesh.add_shape(placed,linear_deflection=.08,angular_deflection=.15);mesh.write(str(dest.with_suffix('.3mf')))
+  export_step(s,str(dest.with_suffix('.step')));export_brep(s,str(dest.with_suffix('.brep')))
+  bb=placed.bounding_box();report['parts'][name]={'volume_mm3':round(shape.volume,3),'print_bounds_mm':[round(v,3) for v in bb.size], 'solids':len(shape.solids()),'valid':bool(shape.is_valid)}
+  projection(s,out/'drawings'/name,(180,-240,190))
+  printing.append(Pos((i%3)*140,(i//3)*115,0)*placed)
+  print('exported',name,flush=True)
+ assembled=[colored(s,n,COLORS[n]) for n,s in parts.items() if n!='fit_coupon']
+ for n,s in hardware.items(): assembled.append(colored(s,n,'#214063' if 'servo' in n else '#82949d' if 'bearing' in n else '#273139' if 'camera' in n else '#478365'))
+ assembly=Compound(children=assembled,label='CAMX_complete_reference_assembly')
+ printset=Compound(children=printing,label='CAMX_print_layout')
+ export_step(assembly,str(out/'assembly/camx.step'));export_brep(assembly,str(out/'assembly/camx.brep'))
+ export_gltf(assembly,str(out/'assembly/camx.glb'),binary=True,linear_deflection=.12,angular_deflection=.2)
+ export_gltf(assembly,str(out/'assembly/camx.gltf'),binary=False,linear_deflection=.12,angular_deflection=.2)
+ for name,comp in [('print_layout',printset),('reference_assembly_DO_NOT_PRINT',assembly)]:
+  m=Mesher();m.add_shape(comp,linear_deflection=.08,angular_deflection=.15);m.write(str(out/'assembly'/f'{name}.3mf'))
+ for view,eye,up in [('front',(0,-1000,axis_center(p)),(0,0,1)),('right',(1000,0,axis_center(p)),(0,0,1)),('top',(0,0,1000),(0,1,0)),('isometric',(300,-450,300),(0,0,1))]:
+  projection(assembly,out/'drawings'/('assembly_'+view),eye,up)
+ (out/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
+ # Separate renderer imports only after CAD export; no GUI required.
+ from render import render_all
+ render_all(parts,hardware,p,out)
+ print('DONE',out)
+
+def axis_center(p):return p['tilt_axis_z']/2
+if __name__=='__main__':main()

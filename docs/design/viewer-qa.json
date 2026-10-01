@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "desktop": [
+    1536,
+    1024
+  ],
+  "mobile": [
+    390,
+    844
+  ],
+  "checks": [
+    "17 CAD part groups loaded",
+    "pan/tilt pivots",
+    "explode transforms",
+    "hardware visibility",
+    "wireframe",
+    "per-part visibility",
+    "four camera views",
+    "reset",
+    "download links HTTP 200",
+    "mobile no overflow",
+    "guide navigation",
+    "zero page errors"
+  ],
+  "method": "Playwright Chromium fallback; IAB unavailable"
+}

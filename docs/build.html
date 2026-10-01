@@ -1,0 +1,161 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>CAMX — build guide</title><style>body{font:17px/1.7 system-ui;background:#0b1017;color:#d2dce4;margin:0}main{max-width:900px;margin:auto;padding:36px 24px}a{color:#a6e8cf}h1,h2,h3{color:#f6f8fa;line-height:1.25}h1{font-size:40px}h2{margin-top:48px}pre{background:#17232e;padding:20px;overflow:auto;border-radius:10px;font-size:14px}code{font-size:.9em}table{display:block;overflow:auto;border-collapse:collapse}td,th{padding:10px 14px;border-bottom:1px solid #293742;text-align:left}img{width:100%;border-radius:16px}.back{display:flex;gap:25px;margin-bottom:30px}strong{color:#fff}</style><main><div class="back"><a href="../index.html">← 3D studio</a><a href="../downloads/camx-files.zip" download>Download project files</a></div><h1 id="camx-assembly-and-commissioning">CAMX assembly and commissioning</h1>
+<p>This is a buildable, dimension-adjustable prototype based on your sketches. It is not physically fit-tested. Use two <strong>positional</strong> SG90 servos; continuous-rotation versions cannot follow angles. The photos appear consistent with a square Anker camera, but do not establish its model or dimensions.</p>
+<h2 id="measurements-before-printing">Measurements before printing</h2>
+<p>Record webcam width/depth/height including the folded original mounting clip; its mass; tripod thread position and usable insertion depth; CG relative to the screw; cable bend radius. Default camera envelope is <strong>55 × 55 × 50 mm</strong>, <strong>150 g</strong>. The thread slot allows approximately ±8 mm fore/aft adjustment. Measure your particular SG90 body, ears, screw pitch, shaft height and stock horn. The pictured ESP32 has a USB-C port; verify its approximately 58 × 29 mm board fits the rails and left-front access opening. Measure USB flange, hole pitch, PCB overhang, capacitor diameter and height. Defaults are not measurements from photographs.</p>
+<p>Edit <code>cad/parameters.json</code>, regenerate, and rerun checks. Fit clearance is per radial/side convention indicated in the source; some structural and fastener dimensions are fixed constants and require editing <code>cad/model.py</code> for substantially different hardware. The parts are not a universal automatic fit system.</p>
+<h2 id="bill-of-materials">Bill of materials</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th style="text-align: right;">Quantity</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ESP32-WROOM-32 DevKit</td>
+<td style="text-align: right;">1</td>
+<td>Pictured USB-C version; 5 V input verified on actual board</td>
+</tr>
+<tr>
+<td>Positional SG90-type servo</td>
+<td style="text-align: right;">2</td>
+<td>Stock spline-matching horns and center screws</td>
+</tr>
+<tr>
+<td>6805 bearing</td>
+<td style="text-align: right;">1</td>
+<td>25 mm ID × 37 mm OD × 7 mm height</td>
+</tr>
+<tr>
+<td>Regulated 5 V / 3 A PSU</td>
+<td style="text-align: right;">1</td>
+<td>Servo power independent of USB programming power</td>
+</tr>
+<tr>
+<td>1000 µF electrolytic</td>
+<td style="text-align: right;">1</td>
+<td>10 V or higher rating; default 13 mm diameter × 25 mm height</td>
+</tr>
+<tr>
+<td>Panel USB-C board/module</td>
+<td style="text-align: right;">1</td>
+<td>User-supplied module; see wiring constraints</td>
+</tr>
+<tr>
+<td>M3 × 10 screws</td>
+<td style="text-align: right;">4</td>
+<td>Lid into base pilot holes; do not overtighten</td>
+</tr>
+<tr>
+<td>M2 × 8 screws</td>
+<td style="text-align: right;">3</td>
+<td>Bearing outer retainer into lid pilot holes</td>
+</tr>
+<tr>
+<td>M2 × 6 screws</td>
+<td style="text-align: right;">4</td>
+<td>Spindle keeper and tripod nut cap into printed spindle pilot holes</td>
+</tr>
+<tr>
+<td>M2 × 8–10 screws</td>
+<td style="text-align: right;">4</td>
+<td>Horn-to-print, two per horn; stock horn holes drilled to suit</td>
+</tr>
+<tr>
+<td>SG90 ear screws</td>
+<td style="text-align: right;">4</td>
+<td>Usually M2 × 8; verify actual flange and screw type</td>
+</tr>
+<tr>
+<td>M2 × 30 screws</td>
+<td style="text-align: right;">4</td>
+<td>Servo hood through to arm; verify length after slicing</td>
+</tr>
+<tr>
+<td>M3 screws, nuts and washers</td>
+<td style="text-align: right;">2 sets</td>
+<td>USB flange; length depends on actual flange thickness</td>
+</tr>
+<tr>
+<td>Steel 1/4-20 UNC hex nut</td>
+<td style="text-align: right;">1</td>
+<td>~11.1 mm across flats, ~5.5 mm thick; fits captive base socket</td>
+</tr>
+<tr>
+<td>1/4-20 camera screw + washer</td>
+<td style="text-align: right;">1</td>
+<td>Choose length for approximately 3–4 mm engagement only if camera permits</td>
+</tr>
+<tr>
+<td>Zip ties / insulating tape / adhesive rubber feet</td>
+<td style="text-align: right;">As needed</td>
+<td>Electrical insulation, strain relief and desk grip</td>
+</tr>
+<tr>
+<td>Normally-open stop button</td>
+<td style="text-align: right;">Optional</td>
+<td>GPIO33 to GND, normally high input</td>
+</tr>
+</tbody>
+</table>
+<p>CAMX exports nine printable parts: base, tripod_nut_retainer, lid, bearing_retainer, spindle_keeper, pan_arm, tilt_cover, camera_cradle, fit_coupon. The reference assembly's hardware shapes are envelopes, not parts to print. Screws, horns and cables are documented but not modeled in full detail.</p>
+<h2 id="printing">Printing</h2>
+<p>Use PETG for the mechanism, 0.2 mm layers, 4 perimeters, 5 top/bottom layers and ~35–45% infill. The base and lid should print flat; bearing rings and fit coupon flat. Pan arm prints on its upright side; cradle prints on its side; servo hood prints with the closed outer face down. Exported STL/3MF files already apply these orientations and sit at Z=0. Inspect the slicer preview: local supports may be required under the pan platform/stem, enclosure access openings and cradle transitions. Do not assume a supplied 3MF has printer, material or support settings; it contains geometry in millimetres only. Individual 3MF is preferable to the large print layout on a small bed.</p>
+<p>Print <code>fit_coupon</code> first: bearing seat, servo cavity, horn pocket, USB socket and hole pitch, capacitor cup. Printed holes may need drill/ream finishing. Keep bearing insertion gentle; do not force it into a tight seat. Sand the spindle until it fits the inner race without wobble; nominal spindle is 24.8 mm. Its axial retainers leave nominal 0.2 mm clearance on each side, so confirm the printed assembly rotates freely. The split-free keeper is screwed on after bearing insertion.</p>
+<h2 id="mechanical-assembly">Mechanical assembly</h2>
+<ol>
+<li>Insert the steel 1/4-20 nut from above into the bottom boss. Its flat sides prevent rotation. Check your existing tripod screw does not rise into the servo. The nut sits 1 mm above the underside. Install tripod_nut_retainer over it with two M2 × 6 screws before installing the pan servo. This cap prevents the nut lifting or dropping out.</li>
+<li>Install the vertical pan servo on the base's two ear towers, shaft upward. Do not install its horn yet. Insert the ESP32 board edges into the vertical side rails; insulate header pins from other hardware. Use tape or a removable foam wedge for longitudinal retention. Secure the USB board and capacitor using ties, leaving PCB pads and capacitor leads insulated.</li>
+<li>Seat the bearing in the lid against its shoulder and install the thin outer retainer with three screws. The pan spindle enters the inner race from above. Attach the keeper from below with two M2 screws; rotate by hand to confirm it does not rub the lid underside.</li>
+<li>Fit the actual pan horn in the spindle underside pocket. The design assumes a <strong>24 × 7 × 2 mm straight double-arm horn</strong>, with attachment holes 16 mm apart. Modify the horn parameters/pocket for your supplied horn. Use the original servo center screw, reached through the center of the pan platform, and two horn-to-print screws reached through the outer access holes. Do not substitute printed spline teeth. Verify the horn stays flat without distorting the printed stem.</li>
+<li>Install the tilt servo in the upright from the outward/right side. Its shaft faces toward the camera and its body is enclosed by the removable hood. Servo ears seat on the arm outer face. Use the two ear holes and stock screws; the hood is installed last. Clearance and all four hood screw paths should be checked dry before powering.</li>
+<li>Center both servos using the firmware with horns removed. Support the camera/cradle during every power or PWM disable operation. Set ARM, wait for center pulses, STOP to hold, then fit the pan horn at straight ahead and the tilt horn with the shelf level. Switch off power before completing fastening. A restarted SG90 can jump to its center; smooth motion applies after enabling, not to the unknown startup position.</li>
+<li>Put the camera mounting screw through the shelf before attaching the cradle, because the space below the shelf is limited. Fit the tilt horn into the outward-facing cradle recess and secure it to the servo spline with its original screw. The screw is reachable from the inner/left side through the hub. Attach the cradle with two horn screws. Some SG90 horns need trimming/drilling to match the coupon; retain enough material around both holes.</li>
+<li>Mount the webcam with a steel 1/4-20 screw through the slot. Shelf stack is nominally 10 mm, with a 2.5 mm head recess; washer and camera thread engagement determine screw length (often about 11–13 mm from under head, but <strong>measure your camera</strong>). There is no printed male camera thread. Use a thin grip pad to resist camera rotation. Keep vents/microphones uncovered. Fold/position the factory clip only if it remains clear during tilt.</li>
+<li>Route the tilt cable along the back of the arm and into the lid's rear-side slot. Leave a relaxed pan loop outside the bearing. Secure camera USB to cradle rear tie slots and leave a second loose loop to the stationary host. Never route cables through the bearing or taut across a pivot. Screw on the hood and lid after testing the empty motion envelope.</li>
+</ol>
+<h2 id="balance-and-load">Balance and load</h2>
+<p>The tilt pivot is at Z=110 mm, with the camera bottom at 83 mm. For a 50 mm-high uniform camera, center height is ~108 mm, close to the pivot. Actual CG includes the factory clip, camera screw, printed cradle and cable drag; adjust fore/aft placement in the slot. Calculate gravity torque as <code>mass_kg × perpendicular_offset_cm</code> in kgf·cm. For 150 g and a 1 cm offset, static torque is 0.15 kgf·cm before bracket/cable loads. At a 3 cm offset it is 0.45 kgf·cm. Published SG90 1.8 kgf·cm is stall torque, <strong>not continuous torque</strong>. Aim for a well-balanced mechanism with static load below approximately 0.3–0.4 kgf·cm as an engineering starting assumption, then verify temperature/jitter; this is not a manufacturer continuous rating.</p>
+<p>The pan bearing supports vertical and overturning loads. Tilt uses the SG90 output shaft as a single-side support, as in the sketch. That servo's plastic bearings/gears remain a durability limitation. For a heavy camera, frequent tracking or strong cable drag, use a stronger servo and a second tilt bearing/support; this requires redesign and revised parameters. Verify stability on the intended tripod/desk; the prototype base is not a monitor clamp.</p>
+<h2 id="wiring">Wiring</h2>
+<pre><code>Regulated PSU +5 V ── optional rated USB-C input OR direct cable ── +5 V bus
+                                                             ├─ ESP32 VIN / 5V
+                                                             ├─ pan red
+                                                             ├─ tilt red
+                                                             └─ capacitor +
+PSU GND ───────────────────────────────────────────────────── GND bus
+                                                             ├─ ESP32 GND
+                                                             ├─ pan brown
+                                                             ├─ tilt brown
+                                                             └─ capacitor −
+ESP32 GPIO18 ── pan orange signal
+ESP32 GPIO19 ── tilt orange signal
+ESP32 GPIO33 ── optional STOP button ── GND
+Webcam USB ── direct to host PC (separate from servo supply)
+</code></pre>
+<p><img alt="Power and signal diagram" src="../downloads/drawings/wiring.svg" /></p>
+<p>Use short, adequate power wires in a star arrangement. Connect the 1000 <strong>µF</strong> capacitor across the supply near the servo branch; polarity stripe indicates negative. <code>1000 mF</code> would mean one farad and is not the intended component. Never power servo red wires from ESP32 3V3 or through the DevKit regulator.</p>
+<p>The photographed USB-C board's schematic and rating are unknown. The housing provides its flange mounting and insulated PCB supports. Default electrical purpose is <strong>power input only</strong>, with D+/D− left unconnected. Verify its VBUS/GND pinout, CC1/CC2 sink resistors, current capability and orientation with documentation/meter before use. USB-C presence alone does not guarantee a 3 A-rated input; a basic breakout with missing CC resistors may not work with a C-to-C source. Use the direct PSU cable/grommet opening if the module is unsuitable. Do not request USB-PD voltage above 5 V.</p>
+<p>For flashing, the ESP32's existing USB-C port is reachable through the left-front opening. Avoid connecting two unisolated 5 V sources: many DevKit clones lack suitable power isolation. Safest setup is flash with PSU disconnected and servo red leads disconnected, unplug programming USB, then use the PSU and Wi-Fi. For simultaneous serial and PSU operation, verify the board schematic or use a USB adapter/cable with <strong>VBUS disconnected but data and GND retained</strong>, keeping ESP32 powered by the PSU. The external panel breakout is not wired to the ESP32 UART/data lines. An ESP32-WROOM-32 cannot read the Anker UVC stream through this breakout.</p>
+<h2 id="firmware-and-calibration">Firmware and calibration</h2>
+<p>Build: <code>.venv/bin/pio run -d firmware</code>. Flash: <code>.venv/bin/pio run -d firmware -t upload --upload-port /dev/ttyUSB0</code> (actual device can be <code>/dev/ttyACM0</code>). Monitor: <code>.venv/bin/pio device monitor -b 115200 -p /dev/ttyUSB0</code>.</p>
+<p>Connect to Wi-Fi <strong>CAMX-PanTilt</strong>, password <strong>camx-setup-2026</strong>, then open <strong>http://192.168.4.1</strong>. Change the password in <code>firmware/include/settings.h</code> before normal use. AP accepts one client, works offline, and has no authentication beyond Wi-Fi. GitHub Pages viewer only simulates geometry; it does not send commands to the hardware.</p>
+<p>Serial uses newline-terminated commands at 115200 baud:</p>
+<pre><code>STATUS
+ARM
+MOVE 15 -5
+HOME
+STOP
+ARM
+DISARM
+CAL 0 1500 1000 2000 -60 60 0 25
+CAL 1 1500 1200 1800 -25 25 1 15
+</code></pre>
+<p>CAL fields are <code>axis center_us low_us high_us minimum_deg maximum_deg invert speed_deg_per_s</code>; axis 0 pan, 1 tilt. Calibration only works while DISARMED and is saved to NVS. Low/center/high must increase, within 700–2300 µs. Limits must straddle zero, within ±80°, and speed is 1–60°/s. These are validation bounds, not permission to exceed the CAD's ±60° pan / ±25° tilt. Default endpoints are 1000/1500/2000 µs for both servos. Pulse-to-mechanical-angle varies: start with horns off, use conservative endpoints such as 1400/1500/1600 µs, then expand slowly while measuring. Firmware degrees are estimated normalized commands, <strong>not measured physical angles</strong>. Invert flips pulse direction. A different invert setting may be needed with your actual horn/servo.</p>
+<p>STOP cancels the trajectory and holds the current estimated commanded angle. ARM resumes. The hardware button latches STOP while pressed and must be released before ARM. It is a software stop, not a power-cut emergency stop. DISARM removes PWM and may let the camera fall. After 5 seconds without an accepted movement or ARM command, firmware stops and continues holding. STATUS polls do not reset that timer. Commands outside limits, NaN, missing numbers and oversized serial lines are rejected. No OTA or cloud dependencies are present.</p>
+<p>HTTP: GET <code>/status</code>; POST <code>/arm</code>, <code>/stop</code>, <code>/disarm</code>, <code>/home</code>; POST <code>/move</code> with URL-encoded <code>pan</code> and <code>tilt</code>. There is no CORS permission to control it from GitHub Pages. Motion control and the public viewer are intentionally separate.</p>
+<h2 id="github-pages-viewer">GitHub Pages viewer</h2>
+<p><code>cd viewer &amp;&amp; npm ci &amp;&amp; npm run build</code> creates <code>viewer/dist</code>, including the viewer, CAD downloads, build guide and firmware. Local development: <code>npm run dev</code>; serve the output with <code>npm run preview</code>. Assets use relative URLs so the site works under <code>/camx/</code> or a custom domain without editing a repository name.</p>
+<p>Push the project (including <code>exports</code>) to your GitHub repository. In <strong>Settings → Pages → Build and deployment → Source</strong>, choose <strong>GitHub Actions</strong>. <code>.github/workflows/pages.yml</code> builds and deploys on pushes to main/master or manual runs. The source repository is <code>worxbend/camx</code>. Once Pages is enabled, the workflow publishes the viewer on pushes to main/master.</p></main></html>

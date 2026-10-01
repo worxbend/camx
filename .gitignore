@@ -1,0 +1,15 @@
+.venv/
+.pio/
+__pycache__/
+*.pyc
+viewer/node_modules/
+viewer/dist/
+viewer/public/models/
+viewer/public/downloads/
+viewer/public/guide/
+viewer/public/firmware/
+viewer/test-results/
+viewer/playwright-report/
+
+# Local reference photos supplied for design, not project deliverables.
+/photo_*_2026-10-01_20-44-11.jpg
