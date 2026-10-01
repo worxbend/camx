@@ -17,17 +17,33 @@ int main(){
  assert(!strcmp(r.intent,"1")&&!strcmp(r.contentType,"application/json"));
  r=request("GET /status HTTP/1.1\r\nHost: camx\r\n\r\n");assert(r.done&&!r.error);
  for(const std::string &bad:{std::string("POST /move HTTP/1.1\r\n\r\n"),std::string("POST /move HTTP/1.1\r\nContent-Length: -1\r\n\r\n"),std::string("POST /move HTTP/1.1\r\nContent-Length: 1\r\nContent-Length: 1\r\n\r\nx"),std::string("POST /move HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n"),std::string("GET /status HTTP/1.1\r\nContent-Length: 1\r\n\r\nx")})assert(request(bad).error==400);
- assert(request(post(std::string(129,'x'))).error==413);
+ assert(request(post(std::string(385,'x'))).error==413);
  assert(request(std::string(2049,'x')).error==413);
  r=request("POST /move HTTP/1.1\r\nContent-Length: 3\r\n\r\nx");assert(!r.done&&!r.error);
  auto message=post(good);for(size_t n=0;n<message.size();n++){r=request(message.substr(0,n));assert(!r.done&&!r.error);}
  Axis axes[2];axes[1].config.minimum=-25;axes[1].config.maximum=25;
  assert(setTargets(axes,15,-5));assert(!setTargets(axes,20,26));assert(axes[0].target==15&&axes[1].target==-5);
  assert(!setTargets(axes,INFINITY,0));assert(setTargets(axes,15,-5));assert(axes[0].target==15);
+ int axis=9;AxisConfig config;config.center=1555;
+ const std::string calibration=R"({"axis":1,"center":1500,"low":1400,"high":1600,"minimum":-10,"maximum":10,"invert":false,"speed":5})";
+ assert(parseCalibration(calibration.c_str(),axis,config)&&axis==1&&config.center==1500&&!config.invert);
+ assert(request(post(calibration)).done);
+ for(size_t n=0;n<calibration.size();n++)assert(!parseCalibration(calibration.substr(0,n).c_str(),axis,config));
+ for(const char *bad:{
+ R"({"axis":1,"center":1500,"low":1400,"high":1600,"minimum":-10,"maximum":10,"invert":0,"speed":5})",
+ R"({"axis":1,"center":1500,"low":1400,"high":1600,"minimum":-10,"maximum":26,"invert":false,"speed":5})",
+ R"({"axis":1,"center":1500.5,"low":1400,"high":1600,"minimum":-10,"maximum":10,"invert":false,"speed":5})",
+ R"({"axis":1,"center":1500,"low":1400,"high":1600,"minimum":-10,"maximum":10,"invert":false,"axis":1})",
+ R"({"axis":1,"center":1500,"low":1400,"high":1600,"minimum":-10,"maximum":10,"invert":false,"speed":5}x)"
+ }){axis=9;config.center=1555;assert(!parseCalibration(bad,axis,config));assert(axis==9&&config.center==1555);}
+ for(int a=0;a<2;a++)for(int b=0;b<2;b++)for(int c=0;c<2;c++)assert(controlLeaseAllowed(a,b,c)==bool(a&&!b&&!c));
+ assert(safeControlPath("/control/"));assert(safeControlPath("/control/assets/index-Ab_01.js"));
+ for(const char *bad:{"/control","/control/../credentials.h","/control/assets/../x","/control/assets/%2e%2e","/control/assets/a/b","/control/assets/","/control/assets/a?x"})assert(!safeControlPath(bad));
+ auto maximum=request(post(std::string(384,'x')));assert(maximum.done&&!maximum.error&&strlen(maximum.body)==384);
  std::mt19937 rng(42);
  for(int i=0;i<30000;i++){
    std::string fuzz;int n=rng()%256;for(int j=0;j<n;j++)fuzz+=char(rng()%128);
-   parseMove(fuzz.c_str(),p,t);request(fuzz);
+   parseMove(fuzz.c_str(),p,t);parseCalibration(fuzz.c_str(),axis,config);safeControlPath(fuzz.c_str());request(fuzz);
  }
  std::cout<<"HTTP/JSON, atomic motion, truncation and 30000 fuzz cases passed\n";
 }

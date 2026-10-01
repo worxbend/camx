@@ -93,6 +93,8 @@ For flashing, the ESP32's existing USB-C port is reachable through the left-fron
 
 ## Firmware and calibration
 
+The rich [SolidJS control client](control-client.md) adds browser calibration, presets, a two-axis aiming pad and guides. Install its separate LittleFS image and open `http://DEVICE_IP/control/`; the small fallback page remains at `/`.
+
 Build: `.venv/bin/pio run -d firmware`. Flash: `.venv/bin/pio run -d firmware -t upload --upload-port /dev/ttyUSB0` (actual device can be `/dev/ttyACM0`). Monitor: `.venv/bin/pio device monitor -b 115200 -p /dev/ttyUSB0`.
 
 Copy `firmware/include/credentials.example.h` to `firmware/include/credentials.h` (ignored by Git), set `WIFI_SSID`, `WIFI_PASSWORD` and preferably `API_TOKEN`, then rebuild and flash. ESP32 joins your 2.4 GHz network in station mode. Serial prints the assigned IP; open that address from the same LAN. It retries every 10 seconds without blocking the motion loop, holds and latches STOP on detected connection loss, and never resumes motion automatically after reconnect. No setup AP is created. Public binaries have no credentials and require a local build for Wi-Fi use. Configured binaries contain secrets: keep them private. See [HTTP API](firmware-api.md). GitHub Pages only simulates geometry.
@@ -113,9 +115,11 @@ CAL 1 1500 1200 1800 -25 25 1 15
 
 CAL fields are `axis center_us low_us high_us minimum_deg maximum_deg invert speed_deg_per_s`; axis 0 pan, 1 tilt. Calibration only works while DISARMED and is saved to NVS. Low/center/high must increase, within 700–2300 µs. Limits must straddle zero and remain within the CAD's ±60° pan / ±25° tilt; speed is 1–60°/s. Unsafe saved limits are discarded at boot. New-device default endpoints are conservative 1400/1500/1600 µs for both servos. Valid saved calibration is retained; inspect it before arming after an upgrade. Pulse-to-mechanical-angle varies: start with horns off, use conservative endpoints such as 1400/1500/1600 µs, then expand slowly while measuring. Firmware degrees are estimated normalized commands, **not measured physical angles**. Invert flips pulse direction. A different invert setting may be needed with your actual horn/servo.
 
-STOP cancels the trajectory and holds the current estimated commanded angle. ARM resumes. The hardware button latches STOP while pressed and must be released before ARM. It is a software stop, not a power-cut emergency stop. DISARM removes PWM and may let the camera fall. After 5 seconds without an accepted movement or ARM command, firmware stops and continues holding. STATUS polls do not reset that timer. Commands outside limits, NaN, missing numbers and oversized serial lines are rejected. No OTA or cloud dependencies are present.
+STOP cancels the trajectory and holds the current estimated commanded angle. ARM resumes. The hardware button latches STOP while pressed and must be released before ARM. It is a software stop, not a power-cut emergency stop. DISARM removes PWM and may let the camera fall. After 5 seconds without an accepted movement, ARM, or explicit heartbeat command, firmware stops and continues holding. STATUS polls do not reset that timer. Commands outside limits, NaN, missing numbers and oversized serial lines are rejected. No OTA or cloud dependencies are present.
 
 HTTP: GET `/status`; POST `/arm`, `/stop`, `/disarm`, `/home`; POST `/move` with JSON `{"pan":15,"tilt":-5}`. Every POST requires `X-CAMX-Request: 1` and, if configured, `Authorization: Bearer TOKEN`. Both offsets are absolute degrees from calibrated center and are validated together before either target changes. There is no CORS permission to control it from GitHub Pages. Motion control and the public viewer are intentionally separate.
+
+See [the control-client guide](control-client.md) for browser calibration and deployment, and [the HTTP API](firmware-api.md) for `/calibration` and `/heartbeat`.
 
 ## GitHub Pages viewer
 

@@ -23,3 +23,12 @@ release/
 
 # Private firmware network configuration.
 credentials.h
+
+# Solid control client and generated ESP32 filesystem.
+client/node_modules/
+client/dist/
+client/test-results/
+client/playwright-report/
+firmware/data/
+
+viewer/public/control/

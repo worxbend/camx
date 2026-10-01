@@ -12,10 +12,17 @@ def zip_files(name,files):
   for p in files:
    if p.is_file() and p.name!='credentials.h':z.write(p,p.relative_to(ROOT))
 zip_files('camx-print-parts.zip',list((ROOT/'exports/parts').glob('*.stl'))+list((ROOT/'exports/parts').glob('*.3mf'))+[ROOT/'exports/assembly/print_layout.3mf',ROOT/'docs/assembly.md',ROOT/'exports/drawings/wiring.svg',ROOT/'exports/drawings/dimensions.svg'])
-zip_files('camx-firmware.zip',list((ROOT/'exports/firmware').glob('*'))+list((ROOT/'firmware/src').glob('*'))+list((ROOT/'firmware/include').glob('*'))+[ROOT/'firmware/platformio.ini',ROOT/'docs/firmware-api.md',ROOT/'tests/http_test.cpp',ROOT/'docs/assembly.md',ROOT/'exports/drawings/wiring.svg'])
+zip_files('camx-firmware.zip',list((ROOT/'exports/firmware').glob('*'))+list((ROOT/'firmware/src').glob('*'))+list((ROOT/'firmware/include').glob('*'))+[ROOT/'firmware/platformio.ini',ROOT/'docs/firmware-api.md',ROOT/'docs/control-client.md',ROOT/'tests/http_test.cpp',ROOT/'docs/assembly.md',ROOT/'exports/drawings/wiring.svg'])
 with zipfile.ZipFile(dest/'camx-viewer.zip','w',zipfile.ZIP_DEFLATED) as z:
  for p in (ROOT/'viewer/dist').rglob('*'):
   if p.is_file():z.write(p,p.relative_to(ROOT/'viewer/dist'))
+with zipfile.ZipFile(dest/'camx-control.zip','w',zipfile.ZIP_DEFLATED) as z:
+ for p in (ROOT/'client/dist').rglob('*'):
+  if p.is_file():z.write(p,p.relative_to(ROOT/'client/dist'))
+ # A dependency-free localhost server beside the extracted static files.
+ bridge=(ROOT/'tools/serve_control.mjs').read_text().replace("new URL('../client/dist/',import.meta.url)","new URL('./',import.meta.url)")
+ z.writestr('serve.mjs',bridge)
+ z.writestr('README.md',"# CAMX Control\n\nRun `CAMX_DEVICE_URL=http://DEVICE_IP node serve.mjs`, then open http://127.0.0.1:4175/control/ . For a safe demo run `node serve.mjs` and open http://127.0.0.1:4175/control/?demo=1 . Node 24 recommended. No npm dependencies are needed for this built client. Use the source project to rebuild or upload the LittleFS image.\n\n"+(ROOT/'docs/control-client.md').read_text())
 (dest/'checksums.sha256').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name+'\n' for p in sorted(dest.glob('*.zip'))))
 notes=f'''## 📷 CAMX — made to move
 
@@ -25,13 +32,15 @@ A symmetrical U-yoke ESP32 camera pan/tilt mechanism based on the owner's revise
 
 - **camx-project.zip** — full source, CAD, firmware, drawings, previews and build guide.
 - **camx-print-parts.zip** — thirteen printable parts in STL/3MF, plus the print layout and guide.
-- **camx-firmware.zip** — PlatformIO source and compiled classic ESP32 binaries (Wi-Fi unconfigured; build locally with ignored credentials.h).
-- **camx-viewer.zip** — ready-to-serve static website, including CAD downloads.
-- **checksums.sha256** — verify all four archives.
+- **camx-firmware.zip** — PlatformIO source and compiled classic ESP32 binaries and matching LittleFS client image (Wi-Fi unconfigured; build locally with ignored credentials.h).
+- **camx-viewer.zip** — ready-to-serve static website, including CAD downloads and the control demo.
+- **camx-control.zip** — built SolidJS 2 control app with a dependency-free local LAN bridge.
+- **checksums.sha256** — verify all five archives.
 
 ### ✅ Build evidence
 
-- ESP32 firmware compiled; motion and bounded HTTP/JSON parser checks passed. Station Wi-Fi, combined pan/tilt offsets, optional bearer token, connection-loss hold and isolated HTTP task.
+- ESP32 firmware compiled; motion and bounded HTTP/JSON parser checks passed. Endless station Wi-Fi retry, combined offsets, authenticated disarmed calibration, explicit heartbeat lease, connection-loss hold and isolated HTTP task.
+- SolidJS 2 rc.13 client built; transport/storage/browser and local bridge tests passed. Presets, calibration wizard, mobile controls, import/export, privacy and no-auto-ARM reconnect verified with simulated devices.
 - {validation['checks']} CAD, STL/3MF and sampled-clearance checks passed.
 - Desktop/mobile WebGL interactions, part visibility, view presets, downloads and guide checked with Playwright.
 
@@ -40,6 +49,8 @@ A symmetrical U-yoke ESP32 camera pan/tilt mechanism based on the owner's revise
 Hardware dimensions are provisional. Print the fit coupon first, balance the camera, and check your actual servo horns/USB module/capacitor. Requires a 6805 pan bearing and a 625 opposite tilt bearing. No physical fit, load or motor testing is claimed. The public viewer simulates the CAD and does not control motors.
 
 Live studio: https://worxbend.github.io/camx/
+Control demo: https://worxbend.github.io/camx/control/?demo=1
+Real control: upload the matching LittleFS image and open http://DEVICE_IP/control/, or use the local bridge.
 '''
 (dest/'RELEASE_NOTES.md').write_text(notes,encoding='utf-8')
 print('Release packages:',', '.join(p.name for p in sorted(dest.iterdir())))

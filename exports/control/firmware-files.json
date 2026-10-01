@@ -1,0 +1,20 @@
+{
+  "files": [
+    {
+      "name": "index.html",
+      "bytes": 403,
+      "sha256": "d7115315f8cedbd85455a5a889b19c3bf7ebaa54e86dca12bc4f2825a2cecbb3"
+    },
+    {
+      "name": "assets/index-BFtXf24-.js",
+      "bytes": 80544,
+      "sha256": "51af9a725a5b6a57d3b0439b9ba95078c6c135ba79647d524979c2461f933dc5"
+    },
+    {
+      "name": "assets/index-C8RlXuOC.css",
+      "bytes": 15932,
+      "sha256": "df6a55cd30593acad0332882829e9ccd7c6bf20a8e295faf9e47d41735054110"
+    }
+  ],
+  "bytes": 96879
+}

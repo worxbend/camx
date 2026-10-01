@@ -1,0 +1,27 @@
+{
+  "name": "camx-control",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "playwright test",
+    "serve": "node ../tools/serve_control.mjs",
+    "bridge": "node ../tools/serve_control.mjs",
+    "stage:firmware": "node ../tools/stage_control.mjs"
+  },
+  "dependencies": {
+    "solid-js": "2.0.0-rc.13",
+    "@solidjs/web": "2.0.0-rc.13"
+  },
+  "devDependencies": {
+    "@solidjs/vite-plugin": "3.0.0-next.47",
+    "vite": "8.3.2",
+    "@playwright/test": "1.55.1"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

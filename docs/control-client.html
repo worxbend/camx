@@ -1,0 +1,64 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>CAMX — control guide</title><style>body{font:17px/1.7 system-ui;background:#0b1017;color:#d2dce4;margin:0}main{max-width:900px;margin:auto;padding:36px 24px}a{color:#a6e8cf}h1,h2,h3{color:#f6f8fa;line-height:1.25}h1{font-size:40px}h2{margin-top:48px}pre{background:#17232e;padding:20px;overflow:auto;border-radius:10px;font-size:14px}code{font-size:.9em}table{display:block;overflow:auto;border-collapse:collapse}td,th{padding:10px 14px;border-bottom:1px solid #293742;text-align:left}img{width:100%;border-radius:16px}.back{display:flex;gap:25px;margin-bottom:30px}strong{color:#fff}</style><main><div class="back"><a href="../index.html">← 3D studio</a><a href="../downloads/camx-files.zip" download>Download project files</a></div><h1>CAMX Control Studio 🎛️</h1>
+<p>The SolidJS client brings pan and tilt, saved poses, calibration, and assembly guidance into one local dashboard. It controls the ESP32 mechanism; it does not carry webcam video or perform face tracking. The public GitHub Pages version is an interactive demo. Browser demo movements never reach a servo.</p>
+<h2>Choose how to connect</h2>
+<p><strong>Device-hosted client:</strong> build the static client and install its LittleFS image using PlatformIO. Open <code>http://DEVICE_IP/control/</code> in a browser. The client and API share an origin, so no CORS setup is required. Firmware keeps the compact fallback page when the rich client is not installed.</p>
+<p><strong>Local bridge:</strong> use Node.js 24 LTS (or a version satisfying <code>client/package.json</code>) and the client source. From the repository root:</p>
+<pre><code class="language-sh">cd client
+npm ci
+npm run build
+CAMX_DEVICE_URL=http://192.168.1.50 npm run serve
+</code></pre>
+<p>Open <code>http://127.0.0.1:4175/control/</code>, or the local URL printed by the server. Replace the example address with the IP printed by the ESP32 at 115200 baud. The bridge serves the built dashboard and forwards its API calls to the configured device. Keep it bound to localhost. It does not discover devices or make a public cloud connection.</p>
+<p>The HTTPS GitHub Pages demo cannot directly control a plaintext LAN ESP32: browser origin and mixed-content restrictions apply. Use the device-hosted client or local bridge for real control.</p>
+<h2>Build and flash the device-hosted client</h2>
+<p>Install Node.js 24 LTS and Python/PlatformIO, then run the client build. Explicitly stage the built assets into <code>firmware/data/control</code>, then build and upload the LittleFS image:</p>
+<pre><code class="language-sh">cd client
+npm ci
+npm run build
+npm run stage:firmware
+cd ../firmware
+pio run -t upload
+pio run -t buildfs
+pio run -t uploadfs
+</code></pre>
+<p>Configure Wi-Fi first by copying <code>firmware/include/credentials.example.h</code> to the Git-ignored <code>credentials.h</code>. Enter your 2.4 GHz SSID, password, and optional long API token. Build configured firmware locally. Do not publish configured binaries: credentials are embedded in them. A filesystem upload replaces its existing contents; calibration is retained in ESP32 NVS separately.</p>
+<h2>First movement</h2>
+<ol>
+<li>Secure the base, support the camera, and confirm wiring and safe servo endpoints. Start with the servo horns removed on a new build.</li>
+<li>Open the real local dashboard. Enter the token if configured and connect. Connecting only reads status; it does not enable PWM.</li>
+<li>Inspect the current saved limits, pulse settings, STOP state, and connection status.</li>
+<li>Deliberately choose <strong>Arm / resume</strong>. First enable assumes mechanical center and can jump; SG90 servos have no position feedback.</li>
+<li>Set pan and tilt together, jog in small steps, or recall a saved pose. Home commands both offsets to zero.</li>
+<li>Use <strong>STOP · hold</strong> to cancel motion while retaining holding torque. Use <strong>Disable PWM</strong> only with the camera supported.</li>
+</ol>
+<p>One movement request contains both offsets:</p>
+<pre><code class="language-json">{&quot;pan&quot;:15,&quot;tilt&quot;:-5}
+</code></pre>
+<p>Values are degrees from calibrated center, not increments. Firmware positions and the dashboard visualization are commanded estimates, not measured angles. Limits apply to both values atomically.</p>
+<p>Connection loss cancels client motion intent; reconnection never automatically arms or resumes it. The firmware also latches STOP after Wi-Fi loss or five seconds without an accepted movement/ARM command. Status polling does not renew this timeout. Any optional live-control lease only renews an explicitly active session; stop it when finished. A browser STOP requires a working network connection: use the physical STOP input for an independent local intervention.</p>
+<h2>Calibrate with measured angles</h2>
+<p>Calibration is accepted only while PWM is disabled. The dashboard exposes center, low and high pulse widths, angle endpoints, inversion, and speed for each axis. Pan is axis <code>0</code>; tilt is axis <code>1</code>.</p>
+<ol>
+<li>Remove horns, disable PWM, and start with narrow pulses: low <code>1400</code>, center <code>1500</code>, high <code>1600</code> µs. Use small ±10° limits and 5°/s speed initially.</li>
+<li>Save one axis, then the other. The dashboard rereads status to confirm the device's saved values.</li>
+<li>Arm unloaded to center the shafts. Mark their positions, disconnect power, and mount horns so the camera faces forward and is level.</li>
+<li>Arm and test pan alone, then tilt alone in small steps. Change inversion while disarmed if your chosen positive direction is reversed.</li>
+<li>Measure travel using a protractor or angle gauge. Disable PWM before each adjustment, then expand pulse endpoints by approximately 10–20 µs per trial. Maintain clearance from collisions, cable tension, and mechanical servo stops.</li>
+<li>Balance and mount the camera, then repeat slowly with a secured base and tether.</li>
+</ol>
+<p>Changing angle limits alone does not expand physical travel: they are mapped to your pulse endpoints. Maximum CAD envelope is pan ±60° and tilt ±25°; measured safe travel may be smaller. Never calibrate by driving into a hard stop. Saved calibration survives reboot.</p>
+<p>The calibration request is:</p>
+<pre><code class="language-json">{&quot;axis&quot;:0,&quot;center&quot;:1500,&quot;low&quot;:1400,&quot;high&quot;:1600,&quot;minimum&quot;:-10,&quot;maximum&quot;:10,&quot;invert&quot;:false,&quot;speed&quot;:5}
+</code></pre>
+<p>The endpoint is <code>POST /calibration</code>. Every mutation requires <code>X-CAMX-Request: 1</code>; a configured token uses <code>Authorization: Bearer TOKEN</code>. See the <a href="firmware-api.html">firmware API</a> for the full contract and <a href="build.html">assembly guide</a> for electrical isolation, fasteners, and power connections.</p>
+<h2>Saved poses and privacy</h2>
+<p>Saved poses are browser-local convenience settings. Imported poses still pass current device limits and require deliberate ARM before motion. Review a preset before recalling it. Exported presets contain pose data, not Wi-Fi credentials or bearer tokens. The connection token stays in memory for the active page session; reenter it after reload. Do not expose the controller or bridge to the Internet: device HTTP traffic is plaintext.</p>
+<h2>Development and verification</h2>
+<pre><code class="language-sh">cd client
+npm ci
+npm run dev
+npm run build
+npx playwright install chromium
+npm test
+</code></pre>
+<p>Browser tests use simulated HTTP responses and demo state. They verify combined requests, explicit arming, stop/disarm, calibration, presets, keyboard focus guards, and responsive layouts without operating motors. These checks complement firmware parser and movement tests; they do not establish real servo clearance, torque, Wi-Fi reliability, electrical safety, or emergency response under load.</p></main></html>

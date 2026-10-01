@@ -20,6 +20,11 @@
 </tr>
 <tr>
 <td>GET</td>
+<td><code>/control/</code></td>
+<td>SolidJS control app from uploaded LittleFS filesystem</td>
+</tr>
+<tr>
+<td>GET</td>
 <td><code>/status</code></td>
 <td>Commanded positions, targets, limits, pulse endpoints, speed/inversion, firmware version, armed/stop state</td>
 </tr>
@@ -48,6 +53,16 @@
 <td><code>/disarm</code></td>
 <td>Cancel and disable PWM; support camera first</td>
 </tr>
+<tr>
+<td>POST</td>
+<td><code>/heartbeat</code></td>
+<td>Renew an already active command lease; never ARM/resume</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/calibration</code></td>
+<td>Validate and save one complete axis configuration while disarmed</td>
+</tr>
 </tbody>
 </table>
 <p>Every POST requires <code>X-CAMX-Request: 1</code>. When <code>API_TOKEN</code> is nonempty, it also requires <code>Authorization: Bearer TOKEN</code>. An empty token disables authentication and is suitable only for a trusted isolated LAN. HTTP is plaintext; this is local control, not an Internet-facing service. No CORS is enabled. The custom header prevents ordinary cross-origin HTML forms from issuing motor commands. Read-only status and the page are unauthenticated; USB serial is a trusted physical control channel.</p>
@@ -64,10 +79,17 @@ curl http://DEVICE_IP/move \
 curl http://DEVICE_IP/status
 </code></pre>
 <p>Action POSTs have empty bodies. Success returns HTTP 200 and status JSON. Errors: 400 invalid/missing fields or headers, 401 bad token, 404 unknown route, 405 unsupported method, 408 incomplete request deadline, 409 stopped/disarmed/out-of-range movement, 413 oversized headers/body, 415 incorrect media type. Unknown fields, duplicate fields, numeric strings, NaN/infinity, trailing JSON and partial updates are rejected. JSON field order does not matter. Requests require HTTP/1.0 or 1.1, CRLF headers, and Content-Length for POST; chunked bodies and persistent/pipelined connections are unsupported.</p>
+<h2>Calibration and control lease</h2>
+<p><code>POST /calibration</code> requires JSON with exactly these eight unique typed fields:</p>
+<pre><code class="language-json">{&quot;axis&quot;:0,&quot;center&quot;:1500,&quot;low&quot;:1400,&quot;high&quot;:1600,&quot;minimum&quot;:-10,&quot;maximum&quot;:10,&quot;invert&quot;:false,&quot;speed&quot;:5}
+</code></pre>
+<p>Axis is integer 0 (pan) or 1 (tilt); center/low/high are integer microseconds, 700–2300, with low &lt; center &lt; high. Minimum must be negative and maximum positive, within ±60° pan / ±25° tilt. Speed is finite 1–60°/s; invert must be a JSON boolean. Unknown/duplicate/missing fields, numeric strings, nonfinite values and trailing content are rejected. Valid settings save only while disarmed; applying them never arms or moves the camera. Use measured physical travel, not default endpoint assumptions.</p>
+<p><code>POST /heartbeat</code> has an empty body. It renews the five-second timeout only while already armed, unstopped and with the physical STOP input released. It never resumes after a timeout or disconnect. The rich client exposes this as an optional <strong>Maintain control</strong> setting, off by default and disabled on STOP, disconnect, calibration or a hidden tab.</p>
+<p>Build and upload the rich interface's LittleFS image separately from firmware. Static assets under <code>/control/</code> are read-only and streamed in the HTTP task; traversal and unknown paths are rejected. Filesystem mount failure leaves the small <code>/</code> fallback page available and never autoformats storage. See the <a href="control-client.html">control client guide</a>.</p>
 <h2>Timing and safeguards</h2>
-<p>A separate FreeRTOS HTTP task handles one client at a time, using fixed buffers: 2,048 bytes for headers and 128 bytes for the body. Incomplete requests have a 1.5-second receive deadline. Short mutex-protected operations share motion state; network reads/writes happen outside the lock. Slow clients cannot intentionally block the servo loop through HTTP reads, but may occupy the single HTTP slot. Firmware is not a certified real-time controller.</p>
-<p>PWM starts disabled. New-device pulse defaults are 1400/1500/1600 µs; valid saved calibration is retained on upgrade, so inspect it before arming. Each target is approached at the calibrated speed. Physical STOP is checked in the loop and again when accepting a move/ARM. STOP retains holding torque. Five seconds without an accepted move or ARM cancels the trajectory and latches STOP; status polls and invalid requests do not renew this watchdog. After timeout, explicitly ARM again. Periodic identical <code>/move</code> requests may renew the watchdog for a long movement or an active tracking client. DISARM and power loss may let the camera drop; use a tether and support it first. ARM on first enable assumes center and may jump because SG90 has no feedback.</p>
-<p>Serial calibration remains disabled while PWM is armed. Calibration cannot exceed the CAD envelope (pan ±60°, tilt ±25°); saved configurations beyond those limits are discarded at boot. There is no firmware face-tracking implementation; a host client may calculate offsets and submit them through this API.</p>
+<p>A separate FreeRTOS HTTP task handles one client at a time, using fixed buffers: 2,048 bytes for headers and 384 bytes for the body. Incomplete requests have a 1.5-second receive deadline. Short mutex-protected operations share motion state; network reads/writes happen outside the lock. Slow clients cannot intentionally block the servo loop through HTTP reads, but may occupy the single HTTP slot. Firmware is not a certified real-time controller.</p>
+<p>PWM starts disabled. New-device pulse defaults are 1400/1500/1600 µs; valid saved calibration is retained on upgrade, so inspect it before arming. Each target is approached at the calibrated speed. Physical STOP is checked in the loop and again when accepting a move/ARM. STOP retains holding torque. Five seconds without an accepted move, ARM or explicitly enabled heartbeat cancels the trajectory and latches STOP; status polls and invalid requests do not renew this watchdog. After timeout, explicitly ARM again. Periodic identical <code>/move</code> requests may renew the watchdog for a long movement or an active tracking client. DISARM and power loss may let the camera drop; use a tether and support it first. ARM on first enable assumes center and may jump because SG90 has no feedback.</p>
+<p>Serial and HTTP calibration remain disabled while PWM is armed. A complete per-axis calibration is saved as one atomic NVS blob before runtime settings change; prior field-based saved settings remain readable. Calibration cannot exceed the CAD envelope (pan ±60°, tilt ±25°); saved configurations beyond those limits are discarded at boot. There is no firmware face-tracking implementation; a host client may calculate offsets and submit them through this API.</p>
 <h2>Verification</h2>
 <p><code>tests/motion_test.cpp</code> checks movement math and atomic target rejection. <code>tests/http_test.cpp</code> tests malformed, oversized and fragmented HTTP/JSON input, duplicate fields, numeric edge cases, truncation and deterministic fuzz cases under AddressSanitizer/UndefinedBehaviorSanitizer. <code>tests/firmware_ui_test.mjs</code> exercises the HTML embedded in the firmware against mocked HTTP responses, including bearer authentication, ARM/STOP/DISARM and a combined JSON offset request. CI compiles the ESP32 firmware and runs these suites.</p>
 <p>Hardware checks still required: real SSID join and router restart, token rejection, slow-client behavior while moving, physical STOP, disconnect/timeout hold, re-ARM, actual servo calibration and load/temperature. No physical hardware test has been claimed.</p>

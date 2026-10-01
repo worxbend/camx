@@ -22,9 +22,11 @@ jobs:
           cache: pip
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           cache: npm
-          cache-dependency-path: viewer/package-lock.json
+          cache-dependency-path: |
+            viewer/package-lock.json
+            client/package-lock.json
       - name: Cache PlatformIO toolchain
         uses: actions/cache@v4
         with:
@@ -35,6 +37,13 @@ jobs:
           python -m pip install -r requirements.txt
           sudo apt-get update -qq
           sudo apt-get install -y fonts-dejavu-core libgl1 libglu1-mesa libxrender1 libxext6
+      - name: Build SolidJS control client and filesystem
+        run: |
+          npm --prefix client ci
+          npm --prefix client run build
+          npm --prefix client run stage:firmware
+          pio run -d firmware -t buildfs
+          node --test tests/bridge_test.mjs
       - name: Build ESP32 firmware
         run: pio run -d firmware
       - name: Verify motion logic
@@ -66,6 +75,7 @@ jobs:
           ln -s "$GITHUB_WORKSPACE/viewer/dist" /tmp/camx-site/camx
           python -m http.server 4173 --bind 127.0.0.1 --directory /tmp/camx-site > /tmp/camx-http.log 2>&1 &
           trap 'kill $!' EXIT
+          npm --prefix ../client test
           node ../tests/firmware_ui_test.mjs
           node scripts/qa.mjs
           node scripts/render-cad.mjs
@@ -92,6 +102,10 @@ jobs:
             docs/design/viewer-qa.json
             docs/design/viewer-desktop.png
             docs/design/viewer-mobile.png
+            /tmp/camx-control-desktop.png
+            /tmp/camx-control-mobile.png
+            /tmp/camx-control-calibration.png
+            /tmp/camx-control-guides.png
           retention-days: 30
   publish:
     if: startsWith(github.ref, 'refs/tags/')

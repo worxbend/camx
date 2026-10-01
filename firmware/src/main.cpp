@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <atomic>
 #include <WiFi.h>
+#include <LittleFS.h>
 #include <ArduinoJson.h>
 #include "http_request.h"
 #include <freertos/semphr.h>
@@ -18,6 +19,7 @@ WiFiServer server(80);
 SemaphoreHandle_t motionMutex;
 struct Guard { Guard(){xSemaphoreTakeRecursive(motionMutex,portMAX_DELAY);} ~Guard(){xSemaphoreGiveRecursive(motionMutex);} };
 bool networkWasConnected=false;
+bool filesystemReady=false;
 std::atomic<bool> networkLost{false};
 uint32_t lastReconnect=0;
 Preferences prefs;
@@ -55,7 +57,7 @@ bool move(float pan,float tilt) {
 String status() {
   Guard guard;
   char out[1024];
-  snprintf(out,sizeof(out),"{\"armed\":%s,\"stopped\":%s,\"estop\":%s,\"pan\":%.2f,\"tilt\":%.2f,\"pan_target\":%.2f,\"tilt_target\":%.2f,\"pan_min\":%.1f,\"pan_max\":%.1f,\"tilt_min\":%.1f,\"tilt_max\":%.1f,\"pan_center\":%d,\"tilt_center\":%d,\"pan_low\":%d,\"pan_high\":%d,\"tilt_low\":%d,\"tilt_high\":%d,\"pan_speed\":%.1f,\"tilt_speed\":%.1f,\"pan_invert\":%s,\"tilt_invert\":%s,\"firmware\":\"0.3.0\"}",
+  snprintf(out,sizeof(out),"{\"armed\":%s,\"stopped\":%s,\"estop\":%s,\"pan\":%.2f,\"tilt\":%.2f,\"pan_target\":%.2f,\"tilt_target\":%.2f,\"pan_min\":%.1f,\"pan_max\":%.1f,\"tilt_min\":%.1f,\"tilt_max\":%.1f,\"pan_center\":%d,\"tilt_center\":%d,\"pan_low\":%d,\"pan_high\":%d,\"tilt_low\":%d,\"tilt_high\":%d,\"pan_speed\":%.1f,\"tilt_speed\":%.1f,\"pan_invert\":%s,\"tilt_invert\":%s,\"firmware\":\"0.4.0\"}",
     armed?"true":"false",stopped?"true":"false",digitalRead(STOP_PIN)==LOW?"true":"false",
     axes[0].current,axes[1].current,axes[0].target,axes[1].target,
     axes[0].config.minimum,axes[0].config.maximum,axes[1].config.minimum,axes[1].config.maximum,
@@ -69,6 +71,11 @@ bool number(const String &s,float &value) {
   char *end;value=strtof(s.c_str(),&end);
   return end!=s.c_str() && *end=='\0' && std::isfinite(value);
 }
+// One NVS blob per axis makes a complete calibration update atomic. The fixed
+// record layout is independent of AxisConfig compiler padding; legacy keys load.
+struct __attribute__((packed)) SavedCalibration {
+ uint32_t version;int32_t center,low,high;float minimum,maximum,speed;uint8_t invert;
+};
 void loadConfig(){
   prefs.begin("camx",true);
   for(int i=0;i<2;i++){
@@ -81,20 +88,26 @@ void loadConfig(){
       c.minimum=prefs.getFloat((key+"n").c_str(),c.minimum);c.maximum=prefs.getFloat((key+"x").c_str(),c.maximum);
       c.speed=prefs.getFloat((key+"s").c_str(),c.speed);c.invert=prefs.getBool((key+"i").c_str(),c.invert);
     }
+    const char *blobKey=i?"tilt2":"pan2";
+    SavedCalibration saved{};
+    if(prefs.getBytesLength(blobKey)==sizeof(saved) && prefs.getBytes(blobKey,&saved,sizeof(saved))==sizeof(saved) && saved.version==2 && saved.invert<=1){
+      AxisConfig candidate;candidate.center=saved.center;candidate.low=saved.low;candidate.high=saved.high;
+      candidate.minimum=saved.minimum;candidate.maximum=saved.maximum;candidate.speed=saved.speed;candidate.invert=saved.invert;
+      if(axisConfigSafe(i,candidate))c=candidate;
+    }
     if(axisConfigSafe(i,c))axes[i].config=c;
   }prefs.end();
 }
 bool calibrate(int axis,const AxisConfig &c){
   Guard guard;
   if(armed || !axisConfigSafe(axis,c))return false;
-  axes[axis].config=c;
-  prefs.begin("camx",false);String k=axis?"tilt":"pan";
-  prefs.putUInt("version",1);prefs.putInt((k+"c").c_str(),c.center);
-  prefs.putInt((k+"l").c_str(),c.low);prefs.putInt((k+"h").c_str(),c.high);
-  prefs.putFloat((k+"n").c_str(),c.minimum);prefs.putFloat((k+"x").c_str(),c.maximum);
-  prefs.putFloat((k+"s").c_str(),c.speed);prefs.putBool((k+"i").c_str(),c.invert);prefs.end();return true;
+  if(!prefs.begin("camx",false))return false;
+  const SavedCalibration saved{2,c.center,c.low,c.high,c.minimum,c.maximum,c.speed,uint8_t(c.invert)};
+  bool savedOk=prefs.putBytes(axis?"tilt2":"pan2",&saved,sizeof(saved))==sizeof(saved);
+  prefs.end();if(!savedOk)return false;
+  axes[axis].config=c;axes[axis].current=0;axes[axis].target=0;return true;
 }
-const char PAGE[] PROGMEM=R"HTML(<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>CAMX</title><style>body{font:18px system-ui;background:#17222c;color:#f1f6fa;max-width:650px;margin:30px auto;padding:20px}button{padding:14px;margin:6px;border:0;border-radius:8px;cursor:pointer}input{width:100%;margin:20px 0}#stop{background:#ff6565}pre{white-space:pre-wrap}label{display:block}small{color:#b8cad5}</style><h1>CAMX pan &amp; tilt</h1><p>Connect the servo supply and check cable slack before arming.</p><button id="arm">Arm / resume</button><button id="home">Home</button><button id="stop">STOP · hold</button><button id="off">Disable PWM</button><label>Pan <output id="pv">0</output>°<input id="pan" type="range" min="-60" max="60" value="0" step="1"></label><label>Tilt <output id="tv">0</output>°<input id="tilt" type="range" min="-25" max="25" value="0" step="1"></label><label>API token (if configured)<input id="token" type="password" autocomplete="off"></label><p id="state" role="status"></p><small>Disable PWM releases holding torque. Support the camera first. Position values are commanded estimates.</small><details><summary>Calibration (PWM disabled)</summary><p>Serial command: CAL axis center low high min max invert speed. See the assembly guide.</p></details><script>
+const char PAGE[] PROGMEM=R"HTML(<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>CAMX</title><style>body{font:18px system-ui;background:#17222c;color:#f1f6fa;max-width:650px;margin:30px auto;padding:20px}button{padding:14px;margin:6px;border:0;border-radius:8px;cursor:pointer}input{width:100%;margin:20px 0}#stop{background:#ff6565}pre{white-space:pre-wrap}label{display:block}small{color:#b8cad5}</style><h1>CAMX pan &amp; tilt</h1><p><a href="/control/" style="color:#81eed0">Open full CAMX control studio</a> (requires uploaded filesystem)</p><p>Connect the servo supply and check cable slack before arming.</p><button id="arm">Arm / resume</button><button id="home">Home</button><button id="stop">STOP · hold</button><button id="off">Disable PWM</button><label>Pan <output id="pv">0</output>°<input id="pan" type="range" min="-60" max="60" value="0" step="1"></label><label>Tilt <output id="tv">0</output>°<input id="tilt" type="range" min="-25" max="25" value="0" step="1"></label><label>API token (if configured)<input id="token" type="password" autocomplete="off"></label><p id="state" role="status"></p><small>Disable PWM releases holding torque. Support the camera first. Position values are commanded estimates.</small><details><summary>Calibration (PWM disabled)</summary><p>Serial command: CAL axis center low high min max invert speed. See the assembly guide.</p></details><script>
 const $=id=>document.getElementById(id);let ready=false,pending=false,sending=false;
 async function post(path,body=''){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json','X-CAMX-Request':'1',...($('token').value?{'Authorization':'Bearer '+$('token').value}:{})},body});if(!r.ok)throw Error(await r.text());return r.json()}
 async function action(path){pending=false;try{await post(path);await refresh()}catch(e){$('state').textContent=e.message}}
@@ -108,8 +121,27 @@ void response(WiFiClient &client,int code,const char *body,const char *type="app
   client.printf("HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length: %u\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n\r\n",code,reason,type,unsigned(strlen(body)));
   client.print(body);
 }
+bool serveControl(WiFiClient &client,const char *path){
+  if(!safeControlPath(path))return false;
+  if(!filesystemReady){response(client,404,"{\"error\":\"client filesystem not uploaded\"}");return true;}
+  String filePath=!strcmp(path,"/control/")?"/control/index.html":path;
+  File file=LittleFS.open(filePath,"r");
+  if(!file || file.isDirectory()){response(client,404,"{\"error\":\"not_found\"}");return true;}
+  const char *type=filePath.endsWith(".html")?"text/html; charset=utf-8":filePath.endsWith(".js")?"text/javascript; charset=utf-8":filePath.endsWith(".css")?"text/css; charset=utf-8":filePath.endsWith(".svg")?"image/svg+xml":filePath.endsWith(".png")?"image/png":filePath.endsWith(".woff2")?"font/woff2":"application/octet-stream";
+  client.printf("HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %u\r\nConnection: close\r\nCache-Control: no-cache\r\nX-Content-Type-Options: nosniff\r\n\r\n",type,unsigned(file.size()));
+  uint8_t buffer[1024];uint32_t started=millis();
+  while(file.available() && client.connected() && uint32_t(millis()-started)<5000){
+    size_t count=file.read(buffer,sizeof(buffer)),sent=0;
+    while(sent<count && client.connected() && uint32_t(millis()-started)<5000){
+      size_t written=client.write(buffer+sent,count-sent);if(!written){vTaskDelay(pdMS_TO_TICKS(1));continue;}sent+=written;
+    }
+    vTaskDelay(pdMS_TO_TICKS(1));
+  }
+  file.close();return true;
+}
 void route(WiFiClient &client,const HttpRequest &r) {
   if(!strcmp(r.method,"GET")) {
+    if(serveControl(client,r.path))return;
     if(!strcmp(r.path,"/")){response(client,200,PAGE,"text/html; charset=utf-8");return;}
     if(!strcmp(r.path,"/status")){response(client,200,status().c_str());return;}
     response(client,404,"{\"error\":\"not_found\"}");return;
@@ -124,20 +156,31 @@ void route(WiFiClient &client,const HttpRequest &r) {
     float pan,tilt;
     if(!parseMove(r.body,pan,tilt)){response(client,400,"{\"error\":\"expected numeric pan and tilt only\"}");return;}
     ok=move(pan,tilt);
+  }else if(!strcmp(r.path,"/calibration")){
+    if(strcmp(r.contentType,"application/json")){response(client,415,"{\"error\":\"application/json required\"}");return;}
+    int axis;AxisConfig config;
+    if(!parseCalibration(r.body,axis,config)){response(client,400,"{\"error\":\"invalid calibration schema or limits\"}");return;}
+    ok=calibrate(axis,config);
   }else{
     if(r.body[0]){response(client,400,"{\"error\":\"action body must be empty\"}");return;}
     if(!strcmp(r.path,"/arm"))ok=arm();
     else if(!strcmp(r.path,"/stop")){halt();ok=true;}
     else if(!strcmp(r.path,"/disarm")){disarm();ok=true;}
     else if(!strcmp(r.path,"/home"))ok=move(0,0);
+    else if(!strcmp(r.path,"/heartbeat")){
+      Guard guard;ok=controlLeaseAllowed(armed,stopped,digitalRead(STOP_PIN)==LOW);
+      if(ok)lastCommand=millis();
+    }
     else{response(client,404,"{\"error\":\"not_found\"}");return;}
   }
   response(client,ok?200:409,ok?status().c_str():"{\"error\":\"motion rejected: check arm, stop and limits\"}");
 }
 void httpTask(void*) {
   // Fixed request buffers and a deadline bound slow/oversized requests before JSON parsing.
+  bool listening=false;
   for(;;){
-    if(WiFi.status()!=WL_CONNECTED){vTaskDelay(pdMS_TO_TICKS(20));continue;}
+    if(WiFi.status()!=WL_CONNECTED){if(listening){server.end();listening=false;}vTaskDelay(pdMS_TO_TICKS(20));continue;}
+    if(!listening){server.begin();listening=true;Serial.print("HTTP ready: http://");Serial.println(WiFi.localIP());}
     WiFiClient client=server.available();
     if(!client){vTaskDelay(pdMS_TO_TICKS(2));continue;}
     client.setTimeout(1000);
@@ -184,6 +227,7 @@ void setup(){
 #endif
   duty(i,0);
  }
+ filesystemReady=LittleFS.begin(false);
  WiFi.onEvent([](WiFiEvent_t event){if(event==ARDUINO_EVENT_WIFI_STA_DISCONNECTED || event==ARDUINO_EVENT_WIFI_STA_LOST_IP)networkLost.store(true);});
  WiFi.persistent(false);WiFi.mode(WIFI_STA);WiFi.setHostname("camx");WiFi.setAutoReconnect(true);
  if(WIFI_SSID[0])WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
@@ -196,7 +240,6 @@ void loop(){
  if(digitalRead(STOP_PIN)==LOW)halt();
  const bool connected=WiFi.status()==WL_CONNECTED;
  if(networkLost.exchange(false) || (networkWasConnected && !connected))halt();
- if(connected && !networkWasConnected){server.begin();Serial.print("HTTP ready: http://");Serial.println(WiFi.localIP());}
  networkWasConnected=connected;
  uint32_t networkNow=millis();
  if(!connected && WIFI_SSID[0] && uint32_t(networkNow-lastReconnect)>=10000){lastReconnect=networkNow;WiFi.reconnect();}

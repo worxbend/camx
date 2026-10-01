@@ -12,7 +12,7 @@
 [![build123d](https://img.shields.io/badge/CAD-build123d-d5aa67?style=flat-square&labelColor=0b1017)](cad/model.py)
 [![Prototype](https://img.shields.io/badge/status-measure_then_print-9cb4d8?style=flat-square&labelColor=0b1017)](docs/assembly.md)
 
-[**🌀 Open the 3D studio**](https://worxbend.github.io/camx/) · [**📦 Get the downloads**](https://github.com/worxbend/camx/releases/latest) · [**🛠️ Build guide**](docs/assembly.md)
+[**🎛️ Try the control desk**](https://worxbend.github.io/camx/control/?demo=1) · [**🌀 Open the 3D studio**](https://worxbend.github.io/camx/) · [**📦 Get the downloads**](https://github.com/worxbend/camx/releases/latest) · [**🛠️ Build guide**](docs/assembly.md)
 
 ![CAMX — actual CAD geometry rendered in the 3D studio](exports/images/assembled.png)
 
@@ -44,8 +44,9 @@ The viewer loads the **actual CAD GLB**. The webcam, PCB, servos and capacitor a
 | --- | --- |
 | The whole project, source included | [`camx-project.zip`](https://github.com/worxbend/camx/releases/latest/download/camx-project.zip) |
 | Straight to the slicer | [`camx-print-parts.zip`](https://github.com/worxbend/camx/releases/latest/download/camx-print-parts.zip) |
-| ESP32 source + compiled binaries | [`camx-firmware.zip`](https://github.com/worxbend/camx/releases/latest/download/camx-firmware.zip) |
+| ESP32 source + binaries + LittleFS client | [`camx-firmware.zip`](https://github.com/worxbend/camx/releases/latest/download/camx-firmware.zip) |
 | A website you can host yourself | [`camx-viewer.zip`](https://github.com/worxbend/camx/releases/latest/download/camx-viewer.zip) |
+| SolidJS control app + local bridge | [`camx-control.zip`](https://github.com/worxbend/camx/releases/latest/download/camx-control.zip) |
 | File integrity checks | [`checksums.sha256`](https://github.com/worxbend/camx/releases/latest/download/checksums.sha256) |
 
 Tagged releases publish these files automatically. Between releases, download the **camx-release-files** artifact from a successful [Build & release run](https://github.com/worxbend/camx/actions/workflows/release.yml). Artifacts are retained for 30 days; releases are the durable download location. The committed [full project bundle](exports/camx-files.zip) is also available.
@@ -61,6 +62,7 @@ Tagged releases publish these files automatically. Between releases, download th
 | [🌀 3D studio](viewer/) | Orbit, pan/tilt previews, explode, wireframe, part visibility and downloads |
 | [🛠️ Assembly guide](docs/assembly.md) | Wiring, fasteners, print orientation, balance and first startup |
 | [✅ Validation](exports/validation.json) | CAD solids, watertight STL/3MF meshes and sampled clearance checks |
+| [🎛️ Control client](client/) | SolidJS 2 aiming pad, presets, calibration, guides and local bridge |
 | [🚀 GitHub Actions](.github/workflows/) | Firmware/CAD rebuilds, viewer tests, release downloads and Pages deployment |
 
 ### 🖨️ Thirteen printed pieces. Zero printed spline teeth.
@@ -92,6 +94,37 @@ Use your servos' original horns and center screws. A **6805 bearing (25 × 37 ×
 
 **PWM starts disabled.** STOP holds the current commanded position; DISARM releases torque. Support the camera before disabling PWM. Servo angles are commanded estimates, not encoder measurements. Automatic face tracking would require a separate host application; it is not included in this firmware.
 
+## 🎛️ A whole control desk. In your browser.
+
+The **SolidJS 2** client gives CAMX a real operator interface: touch-friendly pan/tilt pad, sliders and fine nudges, keyboard controls, editable presets, JSON backups, live status and a bounded activity log. A dedicated calibration workspace includes pulse settings, inversion, speed, measured travel limits, and a four-step walkthrough. Wiring, assembly and Wi-Fi guides are built in.
+
+![CAMX control desk — actual browser interface in demo mode](docs/design/control-desktop-preview.png)
+
+**STOP stays visible.** Connecting never arms the servos. Calibration saves only with PWM disabled. The optional control lease starts off; losing the connection cancels queued motion and reconnection requires deliberate ARM. Tokens remain in memory and stay out of backups and browser storage.
+
+[**Explore the safe demo →**](https://worxbend.github.io/camx/control/?demo=1) · [**Install on your ESP32 →**](docs/control-client.md) · [**Download the client →**](https://github.com/worxbend/camx/releases/latest/download/camx-control.zip)
+
+The Pages version is a simulation. For real control, serve the client directly from the ESP32's **LittleFS** partition at `http://DEVICE_IP/control/`, or run the included **localhost LAN bridge**. No cloud account or Internet connection is needed after installation. Webcam video and face tracking are separate host-side concerns.
+
+SolidJS 2 is pinned to **2.0.0-rc.13**, with matching web runtime/compiler packages. It is a release candidate; dependencies and the lockfile are committed. Node 24 is recommended. [Official Solid releases](https://github.com/solidjs/solid/releases).
+
+```sh
+npm --prefix client ci
+npm --prefix client run build
+npm --prefix client run stage:firmware
+.venv/bin/pio run -d firmware -t buildfs
+# Upload configured firmware + filesystem after reviewing wiring/power isolation.
+.venv/bin/pio run -d firmware -t upload
+.venv/bin/pio run -d firmware -t uploadfs
+```
+
+For a desktop control station:
+
+```sh
+CAMX_DEVICE_URL=http://DEVICE_IP npm --prefix client run serve
+# Open http://127.0.0.1:4175/control/
+```
+
 ## 📡 LAN control
 
 The ESP32 joins your **2.4 GHz Wi-Fi** and serves HTTP on port 80. Send both center-relative offsets in one request; repeats do not accumulate movement. [API and hardening details →](docs/firmware-api.md)
@@ -111,8 +144,14 @@ Public downloads contain **unconfigured firmware**. Build locally with your igno
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 
+# Control client + matching ESP32 filesystem
+npm --prefix client ci
+npm --prefix client run build
+npm --prefix client run stage:firmware
+
 # Firmware + CAD + print validation
 .venv/bin/pio run -d firmware
+.venv/bin/pio run -d firmware -t buildfs
 .venv/bin/python cad/model.py
 .venv/bin/python tests/validate_cad.py
 g++ -std=c++17 -Ifirmware/include tests/motion_test.cpp -o /tmp/camx-motion-test
