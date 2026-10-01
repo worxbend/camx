@@ -1,12 +1,25 @@
 #include <Arduino.h>
+#include <atomic>
 #include <WiFi.h>
-#include <WebServer.h>
+#include <ArduinoJson.h>
+#include "http_request.h"
+#include <freertos/semphr.h>
 #include <Preferences.h>
 #include <esp_arduino_version.h>
 #include "motion.h"
 #include "settings.h"
+#if __has_include("credentials.h")
+#include "credentials.h"
+#else
+constexpr char WIFI_SSID[]="", WIFI_PASSWORD[]="", API_TOKEN[]="";
+#endif
 
-WebServer server(80);
+WiFiServer server(80);
+SemaphoreHandle_t motionMutex;
+struct Guard { Guard(){xSemaphoreTakeRecursive(motionMutex,portMAX_DELAY);} ~Guard(){xSemaphoreGiveRecursive(motionMutex);} };
+bool networkWasConnected=false;
+std::atomic<bool> networkLost{false};
+uint32_t lastReconnect=0;
 Preferences prefs;
 Axis axes[2];
 bool armed=false, stopped=true;
@@ -23,26 +36,32 @@ void duty(int axis,int pulse) {
   ledcWrite(axis,value);
 #endif
 }
-void halt() {for(auto &a:axes)a.stop(); stopped=true;}
-void disarm() {halt();armed=false;duty(0,0);duty(1,0);}
+void halt() {Guard guard;for(auto &a:axes)a.stop(); stopped=true;}
+void disarm() {Guard guard;halt();armed=false;duty(0,0);duty(1,0);}
 bool arm() {
+  Guard guard;
   if(digitalRead(STOP_PIN)==LOW)return false;
   // PWM assumes center on first enable; SG90 has no position feedback.
   if(!armed)for(auto &a:axes){a.current=0;a.target=0;}
   armed=true;stopped=false;lastCommand=millis();return true;
 }
 bool move(float pan,float tilt) {
+  Guard guard;
+  if(digitalRead(STOP_PIN)==LOW){halt();return false;}
   if(!armed || stopped || !std::isfinite(pan) || !std::isfinite(tilt))return false;
-  for(int i=0;i<2;++i){float v=i?tilt:pan;if(v<axes[i].config.minimum || v>axes[i].config.maximum)return false;}
-  axes[0].target=pan;axes[1].target=tilt;lastCommand=millis();return true;
+  if(!setTargets(axes,pan,tilt))return false;
+  lastCommand=millis();return true;
 }
 String status() {
-  char out[620];
-  snprintf(out,sizeof(out),"{\"armed\":%s,\"stopped\":%s,\"estop\":%s,\"pan\":%.2f,\"tilt\":%.2f,\"pan_target\":%.2f,\"tilt_target\":%.2f,\"pan_min\":%.1f,\"pan_max\":%.1f,\"tilt_min\":%.1f,\"tilt_max\":%.1f,\"pan_center\":%d,\"tilt_center\":%d}",
+  Guard guard;
+  char out[1024];
+  snprintf(out,sizeof(out),"{\"armed\":%s,\"stopped\":%s,\"estop\":%s,\"pan\":%.2f,\"tilt\":%.2f,\"pan_target\":%.2f,\"tilt_target\":%.2f,\"pan_min\":%.1f,\"pan_max\":%.1f,\"tilt_min\":%.1f,\"tilt_max\":%.1f,\"pan_center\":%d,\"tilt_center\":%d,\"pan_low\":%d,\"pan_high\":%d,\"tilt_low\":%d,\"tilt_high\":%d,\"pan_speed\":%.1f,\"tilt_speed\":%.1f,\"pan_invert\":%s,\"tilt_invert\":%s,\"firmware\":\"0.3.0\"}",
     armed?"true":"false",stopped?"true":"false",digitalRead(STOP_PIN)==LOW?"true":"false",
     axes[0].current,axes[1].current,axes[0].target,axes[1].target,
     axes[0].config.minimum,axes[0].config.maximum,axes[1].config.minimum,axes[1].config.maximum,
-    axes[0].config.center,axes[1].config.center);
+    axes[0].config.center,axes[1].config.center,
+    axes[0].config.low,axes[0].config.high,axes[1].config.low,axes[1].config.high,
+    axes[0].config.speed,axes[1].config.speed,axes[0].config.invert?"true":"false",axes[1].config.invert?"true":"false");
   return out;
 }
 bool number(const String &s,float &value) {
@@ -62,11 +81,12 @@ void loadConfig(){
       c.minimum=prefs.getFloat((key+"n").c_str(),c.minimum);c.maximum=prefs.getFloat((key+"x").c_str(),c.maximum);
       c.speed=prefs.getFloat((key+"s").c_str(),c.speed);c.invert=prefs.getBool((key+"i").c_str(),c.invert);
     }
-    if(c.valid())axes[i].config=c;
+    if(axisConfigSafe(i,c))axes[i].config=c;
   }prefs.end();
 }
 bool calibrate(int axis,const AxisConfig &c){
-  if(armed || axis<0 || axis>1 || !c.valid())return false;
+  Guard guard;
+  if(armed || !axisConfigSafe(axis,c))return false;
   axes[axis].config=c;
   prefs.begin("camx",false);String k=axis?"tilt":"pan";
   prefs.putUInt("version",1);prefs.putInt((k+"c").c_str(),c.center);
@@ -74,23 +94,63 @@ bool calibrate(int axis,const AxisConfig &c){
   prefs.putFloat((k+"n").c_str(),c.minimum);prefs.putFloat((k+"x").c_str(),c.maximum);
   prefs.putFloat((k+"s").c_str(),c.speed);prefs.putBool((k+"i").c_str(),c.invert);prefs.end();return true;
 }
-const char PAGE[] PROGMEM=R"HTML(<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>CAMX</title><style>body{font:18px system-ui;background:#17222c;color:#f1f6fa;max-width:650px;margin:30px auto;padding:20px}button{padding:14px;margin:6px;border:0;border-radius:8px;cursor:pointer}input{width:100%;margin:20px 0}#stop{background:#ff6565}pre{white-space:pre-wrap}label{display:block}small{color:#b8cad5}</style><h1>CAMX pan &amp; tilt</h1><p>Connect the servo supply and check cable slack before arming.</p><button id="arm">Arm / resume</button><button id="home">Home</button><button id="stop">STOP · hold</button><button id="off">Disable PWM</button><label>Pan <output id="pv">0</output>°<input id="pan" type="range" min="-60" max="60" value="0" step="1"></label><label>Tilt <output id="tv">0</output>°<input id="tilt" type="range" min="-25" max="25" value="0" step="1"></label><p id="state" role="status"></p><small>Disable PWM releases holding torque. Support the camera first. Position values are commanded estimates.</small><details><summary>Calibration (PWM disabled)</summary><p>Serial command: CAL axis center low high min max invert speed. See the assembly guide.</p></details><script>
-const $=id=>document.getElementById(id);let ready=false,pending=false;
-async function post(path,body=''){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});if(!r.ok)throw Error(await r.text());return r.json()}
-async function action(path){try{await post(path);await refresh()}catch(e){$('state').textContent=e.message}}
+const char PAGE[] PROGMEM=R"HTML(<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>CAMX</title><style>body{font:18px system-ui;background:#17222c;color:#f1f6fa;max-width:650px;margin:30px auto;padding:20px}button{padding:14px;margin:6px;border:0;border-radius:8px;cursor:pointer}input{width:100%;margin:20px 0}#stop{background:#ff6565}pre{white-space:pre-wrap}label{display:block}small{color:#b8cad5}</style><h1>CAMX pan &amp; tilt</h1><p>Connect the servo supply and check cable slack before arming.</p><button id="arm">Arm / resume</button><button id="home">Home</button><button id="stop">STOP · hold</button><button id="off">Disable PWM</button><label>Pan <output id="pv">0</output>°<input id="pan" type="range" min="-60" max="60" value="0" step="1"></label><label>Tilt <output id="tv">0</output>°<input id="tilt" type="range" min="-25" max="25" value="0" step="1"></label><label>API token (if configured)<input id="token" type="password" autocomplete="off"></label><p id="state" role="status"></p><small>Disable PWM releases holding torque. Support the camera first. Position values are commanded estimates.</small><details><summary>Calibration (PWM disabled)</summary><p>Serial command: CAL axis center low high min max invert speed. See the assembly guide.</p></details><script>
+const $=id=>document.getElementById(id);let ready=false,pending=false,sending=false;
+async function post(path,body=''){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json','X-CAMX-Request':'1',...($('token').value?{'Authorization':'Bearer '+$('token').value}:{})},body});if(!r.ok)throw Error(await r.text());return r.json()}
+async function action(path){pending=false;try{await post(path);await refresh()}catch(e){$('state').textContent=e.message}}
 $('arm').onclick=()=>action('/arm');$('home').onclick=()=>action('/home');$('stop').onclick=()=>action('/stop');$('off').onclick=()=>action('/disarm');
-async function send(){if(!pending)return;pending=false;try{await post('/move',new URLSearchParams({pan:$('pan').value,tilt:$('tilt').value}))}catch(e){$('state').textContent=e.message}}
+async function send(){if(!pending||sending)return;pending=false;sending=true;try{await post('/move',JSON.stringify({pan:Number($('pan').value),tilt:Number($('tilt').value)}))}catch(e){pending=false;$('state').textContent=e.message}finally{sending=false}}
 for(const id of ['pan','tilt'])$(id).oninput=()=>{$('pv').value=$('pan').value;$('tv').value=$('tilt').value;pending=true};setInterval(send,100);
-async function refresh(){try{const s=await(await fetch('/status')).json();$('state').textContent=s.estop?'Hardware STOP pressed':!s.armed?'PWM disabled':s.stopped?'Stopped · Arm to resume':'Armed';for(const a of ['pan','tilt']){$(a).min=s[a+'_min'];$(a).max=s[a+'_max'];if(!ready)$(a).value=s[a+'_target'];$(a).disabled=!s.armed||s.stopped}ready=true;$('pv').value=$('pan').value;$('tv').value=$('tilt').value}catch(e){$('state').textContent='Connection lost'}}setInterval(refresh,1000);refresh();
+async function refresh(){try{const s=await(await fetch('/status')).json();$('state').textContent=s.estop?'Hardware STOP pressed':!s.armed?'PWM disabled':s.stopped?'Stopped · Arm to resume':'Armed';for(const a of ['pan','tilt']){$(a).min=s[a+'_min'];$(a).max=s[a+'_max'];if(!ready||(!pending&&!sending))$(a).value=s[a+'_target'];$(a).disabled=!s.armed||s.stopped}ready=true;$('pv').value=$('pan').value;$('tv').value=$('tilt').value}catch(e){$('state').textContent='Connection lost'}}setInterval(refresh,1000);refresh();
 </script></html>)HTML";
-void reply(bool ok){server.send(ok?200:409,"application/json",ok?status():"{\"error\":\"Rejected: check arm state, stop switch, numbers and limits\"}");}
-void setupWeb(){
- server.on("/",HTTP_GET,[]{server.send_P(200,"text/html",PAGE);});
- server.on("/status",HTTP_GET,[]{server.send(200,"application/json",status());});
- server.on("/arm",HTTP_POST,[]{reply(arm());});server.on("/stop",HTTP_POST,[]{halt();reply(true);});
- server.on("/disarm",HTTP_POST,[]{disarm();reply(true);});server.on("/home",HTTP_POST,[]{reply(move(0,0));});
- server.on("/move",HTTP_POST,[]{float p,t;reply(number(server.arg("pan"),p)&&number(server.arg("tilt"),t)&&move(p,t));});
- server.onNotFound([]{server.send(404,"text/plain","Not found");});server.begin();
+void response(WiFiClient &client,int code,const char *body,const char *type="application/json") {
+  const char *reason=code==200?"OK":code==400?"Bad Request":code==401?"Unauthorized":code==404?"Not Found":code==405?"Method Not Allowed":code==409?"Conflict":code==413?"Payload Too Large":code==415?"Unsupported Media Type":"Rejected";
+  client.printf("HTTP/1.1 %d %s\r\nContent-Type: %s\r\nContent-Length: %u\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\n\r\n",code,reason,type,unsigned(strlen(body)));
+  client.print(body);
+}
+void route(WiFiClient &client,const HttpRequest &r) {
+  if(!strcmp(r.method,"GET")) {
+    if(!strcmp(r.path,"/")){response(client,200,PAGE,"text/html; charset=utf-8");return;}
+    if(!strcmp(r.path,"/status")){response(client,200,status().c_str());return;}
+    response(client,404,"{\"error\":\"not_found\"}");return;
+  }
+  if(strcmp(r.method,"POST")){response(client,405,"{\"error\":\"method_not_allowed\"}");return;}
+  // Custom header prevents cross-origin HTML form requests; no CORS is exposed.
+  if(strcmp(r.intent,"1")){response(client,400,"{\"error\":\"X-CAMX-Request: 1 required\"}");return;}
+  if(API_TOKEN[0] && String(r.authorization)!=String("Bearer ")+API_TOKEN){response(client,401,"{\"error\":\"unauthorized\"}");return;}
+  bool ok=false;
+  if(!strcmp(r.path,"/move")){
+    if(strcmp(r.contentType,"application/json")){response(client,415,"{\"error\":\"application/json required\"}");return;}
+    float pan,tilt;
+    if(!parseMove(r.body,pan,tilt)){response(client,400,"{\"error\":\"expected numeric pan and tilt only\"}");return;}
+    ok=move(pan,tilt);
+  }else{
+    if(r.body[0]){response(client,400,"{\"error\":\"action body must be empty\"}");return;}
+    if(!strcmp(r.path,"/arm"))ok=arm();
+    else if(!strcmp(r.path,"/stop")){halt();ok=true;}
+    else if(!strcmp(r.path,"/disarm")){disarm();ok=true;}
+    else if(!strcmp(r.path,"/home"))ok=move(0,0);
+    else{response(client,404,"{\"error\":\"not_found\"}");return;}
+  }
+  response(client,ok?200:409,ok?status().c_str():"{\"error\":\"motion rejected: check arm, stop and limits\"}");
+}
+void httpTask(void*) {
+  // Fixed request buffers and a deadline bound slow/oversized requests before JSON parsing.
+  for(;;){
+    if(WiFi.status()!=WL_CONNECTED){vTaskDelay(pdMS_TO_TICKS(20));continue;}
+    WiFiClient client=server.available();
+    if(!client){vTaskDelay(pdMS_TO_TICKS(2));continue;}
+    client.setTimeout(1000);
+    HttpRequest r;uint32_t started=millis();
+    while(client.connected() && !r.done && !r.error && uint32_t(millis()-started)<1500){
+      for(int n=0;n<128 && client.available() && !r.done && !r.error;n++)r.feed(char(client.read()));
+      vTaskDelay(pdMS_TO_TICKS(1));
+    }
+    if(r.error)response(client,r.error,"{\"error\":\"invalid or oversized HTTP request\"}");
+    else if(r.done)route(client,r);
+    else response(client,408,"{\"error\":\"request timeout\"}");
+    client.stop();
+  }
 }
 void command(String line){
  line.trim();bool ok=false;
@@ -111,6 +171,8 @@ void command(String line){
  if(ok)Serial.println(status());else Serial.println("ERR rejected; STATUS, ARM, STOP, DISARM, HOME, MOVE pan tilt, CAL axis center low high min max invert speed");
 }
 void setup(){
+ motionMutex=xSemaphoreCreateRecursiveMutex();
+ if(!motionMutex){while(true)delay(1000);}
  Serial.begin(115200);pinMode(STOP_PIN,INPUT_PULLUP);
  axes[1].config.minimum=-25;axes[1].config.maximum=25;axes[1].config.speed=15;
  loadConfig();
@@ -122,22 +184,34 @@ void setup(){
 #endif
   duty(i,0);
  }
- WiFi.mode(WIFI_AP);WiFi.softAP(AP_NAME,AP_PASSWORD,1,false,1);setupWeb();
- Serial.println("CAMX ready, PWM DISABLED. AP at http://192.168.4.1");lastTick=millis();
+ WiFi.onEvent([](WiFiEvent_t event){if(event==ARDUINO_EVENT_WIFI_STA_DISCONNECTED || event==ARDUINO_EVENT_WIFI_STA_LOST_IP)networkLost.store(true);});
+ WiFi.persistent(false);WiFi.mode(WIFI_STA);WiFi.setHostname("camx");WiFi.setAutoReconnect(true);
+ if(WIFI_SSID[0])WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
+ else Serial.println("Wi-Fi unconfigured: copy credentials.example.h to credentials.h and rebuild.");
+ if(xTaskCreatePinnedToCore(httpTask,"camx-http",8192,nullptr,1,nullptr,0)!=pdPASS){Serial.println("HTTP task failed; PWM remains disabled");while(true)delay(1000);}
+ Serial.println("CAMX ready, PWM DISABLED. Waiting for Wi-Fi; STATUS works over serial.");lastTick=millis();
 }
 void loop(){
  // Check before network/serial handling; a pressed switch latches STOP, keeping torque.
  if(digitalRead(STOP_PIN)==LOW)halt();
- server.handleClient();
+ const bool connected=WiFi.status()==WL_CONNECTED;
+ if(networkLost.exchange(false) || (networkWasConnected && !connected))halt();
+ if(connected && !networkWasConnected){server.begin();Serial.print("HTTP ready: http://");Serial.println(WiFi.localIP());}
+ networkWasConnected=connected;
+ uint32_t networkNow=millis();
+ if(!connected && WIFI_SSID[0] && uint32_t(networkNow-lastReconnect)>=10000){lastReconnect=networkNow;WiFi.reconnect();}
  for(int count=0;count<64 && Serial.available();count++){
   char c=Serial.read();if(c=='\r')continue;
   if(c=='\n'){if(serialOverflow)Serial.println("ERR line too long");else command(serialLine);serialLine="";serialOverflow=false;}
   else if(serialLine.length()<160 && !serialOverflow)serialLine+=c;
   else {serialOverflow=true;serialLine="";}
  }
+ {Guard guard;
  uint32_t now=millis();if(armed && !stopped && uint32_t(now-lastCommand)>COMMAND_TIMEOUT_MS)halt();
  if(uint32_t(now-lastTick)>=20){float dt=uint32_t(now-lastTick)/1000.0f;lastTick=now;
    if(digitalRead(STOP_PIN)==LOW)halt();
    if(armed)for(int i=0;i<2;i++){axes[i].tick(dt);duty(i,pulseFor(axes[i].current,axes[i].config));}
- }delay(1);
+ }
+ }
+ delay(1);
 }

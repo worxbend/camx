@@ -20,3 +20,6 @@ viewer/playwright-report/
 .env
 .env.*
 release/
+
+# Private firmware network configuration.
+credentials.h

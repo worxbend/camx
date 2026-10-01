@@ -86,11 +86,23 @@ Use your servos' original horns and center screws. A **6805 bearing (25 × 37 ×
 
 1. Measure your components and update [`cad/parameters.json`](cad/parameters.json).
 2. Print the **fit coupon**, then dry-fit the empty mechanism.
-3. Flash the ESP32 with the servos disconnected. Follow the guide when using USB and external power.
-4. Join **CAMX-PanTilt** and open **http://192.168.4.1**. Default password: `camx-setup-2026` — change it in [`settings.h`](firmware/include/settings.h).
+3. Keep servos disconnected during flashing. Follow the guide when using USB and external power.
+4. Copy [`credentials.example.h`](firmware/include/credentials.example.h) to `firmware/include/credentials.h` (gitignored), set your Wi-Fi credentials and API token, rebuild and flash. Open the IP printed by the serial monitor after connection.
 5. Center the servos with their horns removed, assemble, balance the camera, and expand travel carefully.
 
 **PWM starts disabled.** STOP holds the current commanded position; DISARM releases torque. Support the camera before disabling PWM. Servo angles are commanded estimates, not encoder measurements. Automatic face tracking would require a separate host application; it is not included in this firmware.
+
+## 📡 LAN control
+
+The ESP32 joins your **2.4 GHz Wi-Fi** and serves HTTP on port 80. Send both center-relative offsets in one request; repeats do not accumulate movement. [API and hardening details →](docs/firmware-api.md)
+
+```sh
+curl -X POST http://DEVICE_IP/arm -H 'X-CAMX-Request: 1' -H "Authorization: Bearer $CAMX_TOKEN"
+curl http://DEVICE_IP/move -H 'X-CAMX-Request: 1' -H "Authorization: Bearer $CAMX_TOKEN" \
+  -H 'Content-Type: application/json' -d '{"pan":15,"tilt":-5}'
+```
+
+Public downloads contain **unconfigured firmware**. Build locally with your ignored `credentials.h`; configured binaries also contain secrets and must stay private.
 
 ## 🧑‍💻 Build it yourself
 

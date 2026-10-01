@@ -2,7 +2,8 @@
 #include <cmath>
 #include <algorithm>
 struct AxisConfig {
-  int center = 1500, low = 1000, high = 2000;
+  // Conservative startup envelope; measure actual travel before expanding.
+  int center = 1500, low = 1400, high = 1600;
   float minimum = -60, maximum = 60, speed = 25;
   bool invert = false;
   bool valid() const {
@@ -28,3 +29,17 @@ struct Axis {
   }
   void stop() {target=current;}
 };
+
+// Validate both axes before changing either target. Repeated offsets are idempotent.
+inline bool setTargets(Axis (&axes)[2],float pan,float tilt){
+  const float values[2]={pan,tilt};
+  for(int i=0;i<2;i++)if(!std::isfinite(values[i]) || values[i]<axes[i].config.minimum || values[i]>axes[i].config.maximum)return false;
+  for(int i=0;i<2;i++)axes[i].target=values[i];
+  return true;
+}
+
+inline bool axisConfigSafe(int axis,const AxisConfig &c){
+  if(axis<0||axis>1||!c.valid())return false;
+  const float limit=axis==0?60.0f:25.0f;
+  return c.minimum>=-limit && c.maximum<=limit;
+}

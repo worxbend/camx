@@ -41,6 +41,10 @@ jobs:
         run: |
           g++ -std=c++17 -Wall -Wextra -Ifirmware/include tests/motion_test.cpp -o /tmp/camx-motion-test
           /tmp/camx-motion-test
+      - name: Hardened HTTP parser tests with sanitizers
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer -Ifirmware/include -Ifirmware/.pio/libdeps/esp32dev/ArduinoJson/src tests/http_test.cpp -o /tmp/camx-http-test
+          /tmp/camx-http-test
       - name: Generate CAD and verify printable geometry
         run: |
           python cad/model.py
@@ -62,6 +66,7 @@ jobs:
           ln -s "$GITHUB_WORKSPACE/viewer/dist" /tmp/camx-site/camx
           python -m http.server 4173 --bind 127.0.0.1 --directory /tmp/camx-site > /tmp/camx-http.log 2>&1 &
           trap 'kill $!' EXIT
+          node ../tests/firmware_ui_test.mjs
           node scripts/qa.mjs
           node scripts/render-cad.mjs
       - name: Package release assets
