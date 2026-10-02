@@ -155,6 +155,19 @@ def build(p):
   return shape.fillet(.8,[e for e in shape.edges() if e.geom_type==GeomType.CIRCLE])
  right=pod(ax,at)
  right+=rounded(14,40,8,5,ax+7,0,rotary_top-.1)
+ # Integral outer-facing bosses bridge the shell cavity: short M2 screws,
+ # rather than long screws across the entire servo housing.
+ cover_x=ax+at;cover_len=p['servo_flange_z']+6
+ screw_z=[rotary_top+15,axis+12]
+ boss_end=cover_x+cover_len-3-.3
+ cover_bosses=None
+ for z in screw_z:
+  for y in [-10,10]:
+   boss=xhole(6.5,boss_end-cover_x+.5,cover_x-.5,y,z)
+   boss=boss.fillet(.4,boss.edges())
+   boss-=xhole(1.8,7.2,boss_end-7,y,z)
+   right+=boss
+   cover_bosses=boss if cover_bosses is None else cover_bosses+boss
  platform+=right
  tilt_origin_x=ax+at+2+p['servo_flange_z']
  tilt_origin_z=axis-p['servo_shaft_offset_x'];body_center_z=tilt_origin_z
@@ -186,7 +199,7 @@ def build(p):
  cover-=right+Pos(0,0,.3)*right # identical interface relief on both shells
  parts['tilt_cover']=cover
  # Passive side has the exact same external shell, with no second motor.
- idler=pod(ax,at)+rounded(14,40,8,5,ax+7,0,rotary_top)
+ idler=pod(ax,at)+rounded(14,40,8,5,ax+7,0,rotary_top)+cover_bosses
  idler=idler.mirror(Plane.YZ)
  bearing_x=-ax-at
  idler-=xhole(9,at+2,bearing_x-1,0,axis)

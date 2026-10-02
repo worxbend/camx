@@ -44,6 +44,10 @@ A symmetrical U-yoke ESP32 camera pan/tilt mechanism based on the owner's revise
 - {validation['checks']} CAD, STL/3MF and sampled-clearance checks passed.
 - Desktop/mobile WebGL interactions, part visibility, view presets, downloads and guide checked with Playwright.
 
+### 🔩 Short cover screws
+
+Both symmetrical arm covers now use M2 × 8 mm screws into four integral standoffs per side, replacing the former M2 × 30 mm screws. The arm CAD, printable exports and assembly guide match. Verify printed pilot fit and screw-head height before tightening.
+
 ### 🔌 Recessed USB-C mounting
 
 The exterior USB-C flange now sits 0.2 mm below the right wall in a measured-fit pocket, with 3 mm reinforced backing. Its PCB remains inside; the fit coupon, hardware model and mounting guide match this change. Confirm actual module dimensions, plug seating and screw-head clearance before printing.

@@ -135,11 +135,11 @@
       "valid": true
     },
     "drive_arm": {
-      "volume_mm3": 17295.353,
+      "volume_mm3": 20356.951,
       "print_bounds_mm": [
         75.6,
         40.0,
-        14.0
+        29.7
       ],
       "solids": 1,
       "valid": true
@@ -165,11 +165,11 @@
       "valid": true
     },
     "idler_arm": {
-      "volume_mm3": 18060.147,
+      "volume_mm3": 21121.745,
       "print_bounds_mm": [
         75.5,
         40.0,
-        14.0
+        29.7
       ],
       "solids": 1,
       "valid": true

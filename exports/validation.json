@@ -1,6 +1,6 @@
 {
   "passed": true,
-  "checks": 585,
+  "checks": 586,
   "details": [
     "tripod_nut_retainer: CAD valid, one solid, STL + 3MF watertight/oriented/bed aligned, matching bounds",
     "base: CAD valid, one solid, STL + 3MF watertight/oriented/bed aligned, matching bounds",
@@ -16,6 +16,7 @@
     "camera_cradle: CAD valid, one solid, STL + 3MF watertight/oriented/bed aligned, matching bounds",
     "fit_coupon: CAD valid, one solid, STL + 3MF watertight/oriented/bed aligned, matching bounds",
     "left/right outer covers are exact mirrored solids",
+    "both arms contain four near-cover standoffs for short screws",
     "neutral parts tripod_nut_retainer/base",
     "neutral parts tripod_nut_retainer/lid",
     "neutral parts tripod_nut_retainer/bearing_retainer",

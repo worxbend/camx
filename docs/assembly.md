@@ -30,7 +30,7 @@ Edit `cad/parameters.json`, regenerate, and rerun checks. Fit clearance is per r
 | M2 × 16 screws + nuts | 2 sets | Pan horn-to-platform; verify head recess and approximately 13 mm stack |
 | M2 × 8 screws + nuts | 2 sets | Tilt horn-to-cradle; verify stock horn and final stack |
 | SG90 ear screws | 4 | Pan stock screws; tilt M2 × 10–12 through-bolts with nuts, verify actual stack |
-| M2 × 30 screws | 8 | Two matching arm covers through to arm; verify length after slicing |
+| M2 × 8 screws | 8 | Matching arm covers into integral standoffs; verify head height |
 | M3 screws, nuts and washers | 2 sets | USB flange; length depends on actual flange thickness |
 | Steel 1/4-20 UNC hex nut | 1 | ~11.1 mm across flats, ~5.5 mm thick; fits captive base socket |
 | 1/4-20 camera screw + washer | 1 | Choose length for approximately 3–4 mm engagement only if camera permits |
@@ -136,3 +136,7 @@ Absolute moves ramp velocity and acceleration using a synchronized jerk-limited 
 The metal flange remains visible from outside but sits 0.2 mm below the right wall. Its PCB and connector body sit inside. The default pocket is 30.6 × 12.6 mm, 2.2 mm deep, for an assumed 30 × 12 × 2 mm flange. A local reinforcement leaves 3 mm of backing beneath the flange. Mount with two M3 screws and internal washers/nuts; choose screw length after measuring the actual flange and screw-head profile. Use low-profile heads that remain below the outer wall plane, or verify/countersink the metal flange appropriately. The CAD does not assume countersunk holes in your photographed module.
 
 Measure the module before printing: flange width, height, thickness, hole pitch, PCB depth, and receptacle housing. Update `usb_flange_thickness`, `usb_flange_recess` (at least the flange thickness plus screw-head height if heads protrude), and related parameters. Print the fit coupon first. Do not force the PCB into the pocket; secure it by its edges with insulated ties. Verify a real USB plug seats fully in the recessed socket before final assembly.
+
+### Short side-cover screws
+
+Both side arms now have matching integral Ø6.5 mm standoffs extending across the shell cavity. Each stops 0.3 mm before the outer cover's inner face, with a 1.8 mm pilot drilled 7 mm deep. Use **four M2 × 8 mm screws per cover** (eight total), with heads fitting the Ø4.5 mm recess. The nominal 3 mm shell and 1.8 mm head recess leave 1.2 mm under the head; an 8 mm screw engages approximately 6.5 mm after the 0.3 mm gap. Check your actual head height and printed pilot fit. Tighten gently; use plastic-compatible thread-forming screws where available. These standoffs are built into the arms and need no separate long bolts or spacers.
