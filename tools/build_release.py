@@ -44,6 +44,10 @@ A symmetrical U-yoke ESP32 camera pan/tilt mechanism based on the owner's revise
 - {validation['checks']} CAD, STL/3MF and sampled-clearance checks passed.
 - Desktop/mobile WebGL interactions, part visibility, view presets, downloads and guide checked with Playwright.
 
+### 🔌 Corrected USB flange size
+
+The owner-confirmed exterior plate is 21 × 8 mm. Its pocket is 21.6 × 8.6 mm with 0.3 mm clearance per side. The separate body opening is provisionally 16.6 × 6 mm. The owner-confirmed mounting pitch is 15 mm centre-to-centre. Hole diameter remains provisionally 3.2 mm; measure before printing. The fit coupon, dimension sheet and exports match.
+
 ### 🧵 Tilt-servo cable routing
 
 Rear pivot-shell exit, integral arm tie eyes, a through-notch in the rotating platform, and a separate rear base entry provide a documented three-wire lead route. A neutral-only orange cable guide appears in the viewer; it hides during motion/explosion because cable deformation is not simulated. Verify actual connector fit, extension length and freedom from pinching across full travel.

@@ -73,8 +73,6 @@ def build(p):
  # Reinforce the locally thinned wall before cutting a rectangular flange pocket.
  base+=usb_transform*box(p['usb_flange_width']+8,recess+back,p['usb_flange_height']+8,usb_x,front-(recess+back)/2,usb_z-p['usb_flange_height']/2-4)
  base-=usb_transform*box(p['usb_flange_width']+2*p['fit_clearance'],recess+1,p['usb_flange_height']+2*p['fit_clearance'],usb_x,front-(recess-1)/2,usb_z-p['usb_flange_height']/2-p['fit_clearance'])
- # Body clearance through the backing; only the recessed plate is exposed outside.
- base-=usb_transform*box(p['usb_pcb_width']+2*p['fit_clearance'],recess+back+2,p['usb_flange_height']-2,usb_x,front-(recess+back)/2,usb_z-(p['usb_flange_height']-2)/2)
  for dx in [-p['usb_flange_hole_pitch']/2,p['usb_flange_hole_pitch']/2]:
   base-=usb_transform*yhole(p['usb_flange_hole_diameter'],recess+back+2,usb_x+dx,front-recess-back-1,usb_z)
  # Edge rails support the PCB without touching pads; secure with insulated zip ties.
@@ -83,6 +81,8 @@ def build(p):
   base+=usb_transform*box(2,p['usb_pcb_depth'],usb_z-3-t,x,pcb_front-p['usb_pcb_depth']/2,t)
   for y in [pcb_front-5,pcb_front-p['usb_pcb_depth']+4]:
    base-=usb_transform*box(3,3,t+2,x,y,-1)
+ # PCB body opening sized separately from the owner-specified flange, including clearance through rails.
+ base-=usb_transform*box(p['usb_body_opening_width'],recess+back+2,p['usb_body_opening_height'],usb_x,front-(recess+back)/2,usb_z-p['usb_body_opening_height']/2)
  # Separate regulated PSU cable through right wall, away from the USB board.
  base-=xhole(p['power_cable_diameter']+1,t+4,W/2-t-1,-22,13)
  for y in [-28,-16]:base-=box(3,3,t+2,W/2-t-8,y,-1)
@@ -288,7 +288,7 @@ def build(p):
  coupon-=box(p['horn_width']+.4,p['horn_length']+.4,5,42,11,-1)
  coupon+=cyl(cd+4,7,10,-18,3)-cyl(cd,9,10,-18,2.5)
  coupon-=box(p['usb_flange_width']+2*p['fit_clearance'],p['usb_flange_height']+2*p['fit_clearance'],recess+1,-25,-23,3-recess)
- coupon-=box(p['usb_pcb_width']+2*p['fit_clearance'],p['usb_flange_height']-2,5,-25,-23,-1)
+ coupon-=box(p['usb_body_opening_width'],p['usb_body_opening_height'],5,-25,-23,-1)
  for dx in [-p['usb_flange_hole_pitch']/2,p['usb_flange_hole_pitch']/2]:coupon-=cyl(p['usb_flange_hole_diameter'],5,-25+dx,-23,-1)
  parts['fit_coupon']=coupon
  # Non-print hardware envelopes, intentionally simplified and labelled.

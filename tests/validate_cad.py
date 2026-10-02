@@ -66,6 +66,8 @@ clear(parts['pan_arm'],Pos(0,p['pan_platform_diameter']/2-2,p['base_height']+p['
 clear(parts['tilt_cover'],Pos(p['arm_inner_x']+p['arm_thickness']+13,15,p['tilt_axis_z']-10)*Box(8,10,4,align=(Align.CENTER,Align.CENTER,Align.MIN)),'rear servo shell exit open')
 for name in parts:
  if name!='fit_coupon':clear(hw['tilt_cable_route'],parts[name],f'neutral illustrative cable/{name}')
+clear(parts['base'],Pos(p['base_width']/2-2.5,p['usb_mount_y'],18-p['usb_body_opening_height']/2)*Box(5,p['usb_body_opening_width'],p['usb_body_opening_height'],align=(Align.CENTER,Align.CENTER,Align.MIN)),'configured USB body opening unobstructed through wall and PCB rails')
+clear(parts['fit_coupon'],Pos(-25,-23,-1)*Box(p['usb_body_opening_width'],p['usb_body_opening_height'],5,align=(Align.CENTER,Align.CENTER,Align.MIN)),'fit coupon matches configured USB body opening')
 for angle in range(-25,26,5):
  transform=Pos(0,0,p['tilt_axis_z'])*Rot(angle,0,0)*Pos(0,0,-p['tilt_axis_z'])
  for name in ['camera_cradle','camera_envelope']:

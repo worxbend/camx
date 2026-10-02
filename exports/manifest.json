@@ -33,9 +33,9 @@
     "esp32_thickness_envelope": 14.0,
     "capacitor_diameter": 13.0,
     "capacitor_height": 25.0,
-    "usb_flange_width": 30.0,
-    "usb_flange_height": 12.0,
-    "usb_flange_hole_pitch": 24.0,
+    "usb_flange_width": 21.0,
+    "usb_flange_height": 8.0,
+    "usb_flange_hole_pitch": 15.0,
     "usb_flange_hole_diameter": 3.2,
     "usb_socket_width": 10.5,
     "usb_socket_height": 4.5,
@@ -60,7 +60,9 @@
     "usb_mount_y": 8,
     "usb_mount_backing": 3.0,
     "pan_platform_diameter": 92,
-    "arm_stem_depth": 7
+    "arm_stem_depth": 7,
+    "usb_body_opening_width": 16.6,
+    "usb_body_opening_height": 6.0
   },
   "datums": {
     "bearing_bottom_z": 42.5,
@@ -97,7 +99,7 @@
       "valid": true
     },
     "base": {
-      "volume_mm3": 76799.244,
+      "volume_mm3": 76839.625,
       "print_bounds_mm": [
         100.0,
         82.0,
@@ -207,7 +209,7 @@
       "valid": true
     },
     "fit_coupon": {
-      "volume_mm3": 21702.434,
+      "volume_mm3": 22205.466,
       "print_bounds_mm": [
         105.0,
         68.0,
