@@ -3,18 +3,18 @@
     {
       "name": "index.html",
       "bytes": 403,
-      "sha256": "d413099b06a6c3695f9cc761953326975e81ab0f60d7d4bf4b607987ce877361"
-    },
-    {
-      "name": "assets/index-2Ag31JDa.js",
-      "bytes": 93888,
-      "sha256": "4ace7160ddaaeb4ed014a3b7fa0c88a74fe5086ce6c73c9ccda357f57c02bd62"
+      "sha256": "a43543c560b244a864adcf808bc53426fe15be1d070a1184a321fba0e8b5c332"
     },
     {
       "name": "assets/index-BSj4lolr.css",
       "bytes": 24410,
       "sha256": "46cd364d6821fec278c967626164fecdace01f254edf6c66e0fff5f83485cc28"
+    },
+    {
+      "name": "assets/index-CoATHioY.js",
+      "bytes": 93959,
+      "sha256": "3fd9fdd9b607b49df537f59f6fb231aedfa5e487e531ba610bc96f22cd00e9e1"
     }
   ],
-  "bytes": 118701
+  "bytes": 118772
 }

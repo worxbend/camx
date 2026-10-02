@@ -44,6 +44,12 @@ A symmetrical U-yoke ESP32 camera pan/tilt mechanism based on the owner's revise
 - {validation['checks']} CAD, STL/3MF and sampled-clearance checks passed.
 - Desktop/mobile WebGL interactions, part visibility, view presets, downloads and guide checked with Playwright.
 
+### 🔎 Final audit
+
+Release cleanup handles sequence exhaustion without escaping UI handlers; new presets capture the latest commanded position after braking. JSON schema scanners enforce standard whitespace. Absolute moves synchronize arrival; jogging runs axes independently. Position readouts remain commanded estimates: standard SG90 servos do not expose measured position.
+
+Known unresolved item: the Python CAD/image toolchain pins Pillow 12.2.0 and has 13 GitHub security alerts. The patched 12.3.0 conflicts with the current upstream threejs-materials dependency cap; a compatible upstream update or reviewed fork is still needed. This dependency is not used by the ESP32 or browser runtime. Hardware fit, power/current headroom, runtime stack/heap margins, wireless recovery and loaded servo behavior still require bench qualification.
+
 ### 🧪 Prototype status
 
 Hardware dimensions are provisional. Print the fit coupon first, balance the camera, and check your actual servo horns/USB module/capacitor. Requires a 6805 pan bearing and a 625 opposite tilt bearing. No physical fit, load or motor testing is claimed. The public viewer simulates the CAD and does not control motors.

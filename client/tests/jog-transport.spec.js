@@ -19,3 +19,8 @@ test('legacy status disables jog API and malformed partial capabilities are reje
  const t=new Transport({fetcher:async()=>reply(legacy)});await t.request('/status',undefined,'GET');await expect(t.jog(.25,0)).rejects.toThrow('newer firmware');
  const malformed=new Transport({fetcher:async()=>reply({...legacy,control_epoch:1})});await expect(malformed.request('/status',undefined,'GET')).rejects.toThrow();
 });
+test('exhausted release returns a rejection and cancels active queued jog intent',async()=>{
+ const state={...initialStatus(),armed:true,stopped:false,control_epoch:99};const calls=[];
+ const t=new Transport({fetcher:async(url,opts)=>{calls.push(url);if(url==='/jog')return new Promise((_r,reject)=>opts.signal.addEventListener('abort',()=>reject(new DOMException('Cancelled','AbortError'))));return reply(state)}});
+ await t.request('/status',undefined,'GET');const hold=t.jog(.25,0).catch(()=>{});await t.jog(-.25,0);t.jogSeq=0xffffffff;let release;expect(()=>release=t.releaseJog()).not.toThrow();await expect(release).rejects.toThrow('sequence exhausted');await hold;expect(t.jogPending).toBeNull();expect(t.jogSending).toBe(false);expect(t.jogControllers.size).toBe(0);expect(calls.filter(p=>p==='/jog')).toHaveLength(1);
+});

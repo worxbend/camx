@@ -26,7 +26,7 @@ Matte graphite base and matching full-height side shells, restrained raised pan 
 
 Three parallel workstreams implemented the SolidJS 2 client, its browser/transport tests and documentation, and the firmware calibration/heartbeat/filesystem API. Integration added a dependency-free localhost LAN bridge, validated asset staging, partition-table-derived filesystem flashing instructions, standalone client downloads and Pages deployment. The client uses SolidJS 2.0.0-rc.13 with exact runtime/compiler pins and a committed lockfile.
 
-The browser never arms on connection or reconnect. STOP cancels queued motion, calibration requires disabled PWM, and the optional heartbeat begins off. Tokens remain in memory. Forty client tests, three bridge tests, firmware compilation and sanitizer parser tests passed locally; simulated devices do not replace physical commissioning. Visual references and actual interface previews are in `docs/design/`.
+The browser never arms on connection or reconnect. STOP cancels queued motion, calibration requires disabled PWM, and the optional heartbeat begins off. Tokens remain in memory. Forty-four client tests, three bridge tests, firmware compilation and sanitizer parser tests passed locally; simulated devices do not replace physical commissioning. Visual references and actual interface previews are in `docs/design/`.
 
 ## Smooth motion update
 
@@ -37,3 +37,7 @@ Replaced constant-rate steps with a local fixed-two-axis Ruckig 0.15.3 S-curve p
 The supplied phone remote references guided a matte, concave four-lobe direction pad with a circular Home key and persistent STOP. Native SVG/CSS geometry renders the control; generated concepts are visual references, not functional backgrounds. Precision controls and calibration remain separate workspaces. See `docs/design/remote-spec.md` for visual decisions.
 
 Three coordinated workstreams extended firmware motion/lease fencing, the SolidJS transport/remote, and tests/research documentation. The protocol uses normalized velocity pairs, 100 ms refresh and a separate 500 ms nonzero-jog lease. A zero-rate release brakes smoothly; missed renewal immediately latches STOP. Epoch/sequence fencing rejects old mode packets. Pointer capture, cancellation, visibility and keyboard lifecycle are covered by regression tests. Research and tradeoffs are documented in [jog-design.md](jog-design.md). Physical validation remains required.
+
+## Final audit fixes and remaining gate
+
+Final review corrected release-error propagation at sequence exhaustion, JSON whitespace validation, current-pose capture after braking and the synchronized-absolute versus independent-jog documentation. CI now runs the client suite against the built production site under `/camx/control/`; development-only Solid timing diagnostics are not treated as production failures. The compatible Python environment passes `pip check`, but its Pillow security upgrade is blocked by the current upstream material-library upper bound. See the [final readiness audit](design/remote-qa.md) for the outstanding dependency and physical commissioning gates.

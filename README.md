@@ -28,6 +28,8 @@ CAMX follows the owner's hand-drawn concept: **a curved camera cradle and an ESP
 
 > 🧪 **Prototype, with receipts.** The firmware compiles and **583 CAD/mesh/clearance checks pass**. Hardware dimensions are still provisional; physical fit and load testing are the next step. Print the fit coupon first.
 
+**Readiness:** ready for controlled prototype commissioning after fit/power checks. Physical validation remains pending, and the Python CAD/image toolchain has an unresolved Pillow dependency constraint and 13 security alerts. Firmware/browser production audits have no known findings. [Final audit and limitations →](docs/design/remote-qa.md)
+
 ## 🌀 Spin it before you print it
 
 [**Launch the live viewer →**](https://worxbend.github.io/camx/)

@@ -59,7 +59,14 @@ export class JogController {
     }
   }
   releaseIntent() {
-    const pending = Promise.resolve(this.release());
+    let pending;
+    try {
+      // Call immediately so normal release remains higher priority than holds.
+      pending = Promise.resolve(this.release());
+    } catch (error) {
+      // Pointer/key cleanup must finish even for a synchronously failing adapter.
+      pending = Promise.reject(error);
+    }
     this.releasePending = pending;
     const settled = () => {
       if (this.releasePending === pending) this.releasePending = null;

@@ -76,7 +76,7 @@ bool jog(double pan,double tilt,uint32_t epoch,uint32_t seq){
 String status() {
   Guard guard;
   char out[1280];
-  snprintf(out,sizeof(out),"{\"armed\":%s,\"stopped\":%s,\"estop\":%s,\"pan\":%.2f,\"tilt\":%.2f,\"pan_target\":%.2f,\"tilt_target\":%.2f,\"pan_min\":%.1f,\"pan_max\":%.1f,\"tilt_min\":%.1f,\"tilt_max\":%.1f,\"pan_center\":%d,\"tilt_center\":%d,\"pan_low\":%d,\"pan_high\":%d,\"tilt_low\":%d,\"tilt_high\":%d,\"pan_speed\":%.1f,\"tilt_speed\":%.1f,\"pan_invert\":%s,\"tilt_invert\":%s,\"firmware\":\"0.5.0\",\"control_epoch\":%u,\"jog_seq\":%u,\"jog_pan\":%.3f,\"jog_tilt\":%.3f,\"jog_active\":%s,\"jog_lease_ms\":500}",
+  snprintf(out,sizeof(out),"{\"armed\":%s,\"stopped\":%s,\"estop\":%s,\"pan\":%.2f,\"tilt\":%.2f,\"pan_target\":%.2f,\"tilt_target\":%.2f,\"pan_min\":%.1f,\"pan_max\":%.1f,\"tilt_min\":%.1f,\"tilt_max\":%.1f,\"pan_center\":%d,\"tilt_center\":%d,\"pan_low\":%d,\"pan_high\":%d,\"tilt_low\":%d,\"tilt_high\":%d,\"pan_speed\":%.1f,\"tilt_speed\":%.1f,\"pan_invert\":%s,\"tilt_invert\":%s,\"firmware\":\"0.5.1\",\"control_epoch\":%u,\"jog_seq\":%u,\"jog_pan\":%.3f,\"jog_tilt\":%.3f,\"jog_active\":%s,\"jog_lease_ms\":500}",
     armed?"true":"false",stopped?"true":"false",digitalRead(STOP_PIN)==LOW?"true":"false",
     axes[0].current,axes[1].current,axes[0].target,axes[1].target,
     axes[0].config.minimum,axes[0].config.maximum,axes[1].config.minimum,axes[1].config.maximum,

@@ -45,6 +45,20 @@ int main(){
  const std::string jogBody=R"({"pan":0,"tilt":0,"epoch":2,"seq":3})";
  for(size_t n=0;n<jogBody.size();n++)assert(!parseJog(jogBody.substr(0,n).c_str(),jp,jt,je,js));
  for(const char *bad:{R"({"pan":1.1,"tilt":0,"epoch":1,"seq":1})",R"({"pan":1,"tilt":0,"epoch":-1,"seq":1})",R"({"pan":1,"tilt":0,"epoch":1,"seq":4294967296})",R"({"pan":1,"tilt":0,"epoch":1,"seq":1.5})",R"({"pan":1,"tilt":0,"epoch":1,"epoch":2})",R"({"pan":true,"tilt":0,"epoch":1,"seq":1})",R"({"pan":1,"tilt":0,"epoch":1,"seq":1}x)"}){jp=99;jt=88;je=7;js=8;assert(!parseJog(bad,jp,jt,je,js));assert(jp==99&&jt==88&&je==7&&js==8);}
+ // JSON whitespace is only SP, TAB, CR, LF, never VT or FF.
+ assert(parseMove(("\t\r\n"+good).c_str(),p,t));
+ assert(parseCalibration(("\t\r\n"+calibration).c_str(),axis,config));
+ assert(parseJog(("\t\r\n"+jogBody).c_str(),jp,jt,je,js));
+ for(char invalidWhitespace:{'\v','\f'}){
+   for(const auto &schema:{good,calibration,jogBody}){
+     for(size_t insertion:{size_t(0),size_t(1),schema.find(':')+1,schema.size()}){
+       const auto bad=schema.substr(0,insertion)+invalidWhitespace+schema.substr(insertion);
+       if(schema==good)assert(!parseMove(bad.c_str(),p,t));
+       else if(schema==calibration)assert(!parseCalibration(bad.c_str(),axis,config));
+       else assert(!parseJog(bad.c_str(),jp,jt,je,js));
+     }
+   }
+ }
  std::mt19937 rng(42);
  for(int i=0;i<30000;i++){
    std::string fuzz;int n=rng()%256;for(int j=0;j<n;j++)fuzz+=char(rng()%128);

@@ -28,7 +28,7 @@ export const initialStatus = () => ({
   tilt_speed: 15,
   pan_invert: false,
   tilt_invert: false,
-  firmware: "0.5.0-demo",
+  firmware: "0.5.1-demo",
   control_epoch: 1,
   jog_seq: 0,
   jog_pan: 0,
@@ -245,13 +245,17 @@ export class Transport {
       if (generation === this.jogGeneration) this.jogSending = false;
     }
   }
-  releaseJog() {
-    if (this.jogEpoch === null) {
+  async releaseJog() {
+    let body;
+    try {
+      if (this.jogEpoch === null) return null;
+      body = this.nextJog(0, 0);
+    } finally {
+      // Release always discards old hold work, including when no newer sequence
+      // exists. Rejection reaches the normal UI error path; the device lease
+      // remains the fallback until the user deliberately stops or arms again.
       this.cancelJog();
-      return Promise.resolve(null);
     }
-    const body = this.nextJog(0, 0);
-    this.cancelJog();
     return this.request("/jog", body, "POST", { lane: "jog", keepalive: true });
   }
   demoAdvance() {

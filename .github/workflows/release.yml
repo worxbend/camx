@@ -75,7 +75,7 @@ jobs:
           ln -s "$GITHUB_WORKSPACE/viewer/dist" /tmp/camx-site/camx
           python -m http.server 4173 --bind 127.0.0.1 --directory /tmp/camx-site > /tmp/camx-http.log 2>&1 &
           trap 'kill $!' EXIT
-          npm --prefix ../client test
+          CAMX_TEST_URL=http://127.0.0.1:4173/camx/control/ npm --prefix ../client test
           node ../tests/firmware_ui_test.mjs
           node scripts/qa.mjs
           node scripts/render-cad.mjs

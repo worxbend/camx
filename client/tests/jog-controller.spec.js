@@ -16,3 +16,6 @@ test('repeated cleanup awaits the same pending release without duplicate request
  let resolve;const calls=[];const c=new JogController({canJog:()=>true,send:()=>{},release:()=>{calls.push(1);return new Promise(r=>resolve=r)}});
  c.start('right',1,0);const first=c.clear();const second=c.clear();expect(first).toBe(second);expect(calls).toHaveLength(1);expect(c.timer).toBeNull();resolve();await first;expect(c.clear()).toBeNull();c.dispose();
 });
+test('synchronous release callback failure becomes a rejected cleanup promise',async()=>{
+ const c=new JogController({canJog:()=>true,send:()=>{},release:()=>{throw new Error('release failed')}});c.start('right',1,0);let cleanup;expect(()=>cleanup=c.clear()).not.toThrow();expect(c.inputs.size).toBe(0);expect(c.timer).toBeNull();await expect(cleanup).rejects.toThrow('release failed');expect(c.releasePending).toBeNull();c.dispose();
+});

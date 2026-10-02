@@ -101,9 +101,9 @@ function App() {
     if (e.name === "AbortError") return;
     jogController.clear(false);
     transport.cancelJog();
-    setError(e.message);
     if (e.status === 409 && connected())
       await run(() => transport.request("/status", undefined, "GET"));
+    setError(e.message);
   };
   jogController = new JogController({
     canJog,
@@ -129,8 +129,8 @@ function App() {
   };
   const startHold = (id, p, t) => jogController.start(id, p, t),
     endHold = (id) => jogController.end(id);
-  const run = async (fn) => {
-    setError("");
+  const run = async (fn, preserveError = false) => {
+    if (!preserveError) setError("");
     try {
       return await fn();
     } catch (e) {
@@ -249,8 +249,9 @@ function App() {
         document.visibilityState === "visible" &&
         Date.now() - lastMove > 1000
       )
-        await run(() => transport.request("/heartbeat"));
-      else await run(() => transport.request("/status", undefined, "GET"));
+        await run(() => transport.request("/heartbeat"), true);
+      else
+        await run(() => transport.request("/status", undefined, "GET"), true);
     } finally {
       pollBusy = false;
     }
@@ -333,16 +334,25 @@ function App() {
     savePresets(value);
   };
   const savePose = () => {
+    // A new "current pose" is the most recent device-commanded estimate,
+    // including the settled position after release. Existing preset edits
+    // deliberately retain their independent Precision draft.
+    const posePan = editing() < 0 ? status().pan : pan();
+    const poseTilt = editing() < 0 ? status().tilt : tilt();
     if (
       !name().trim() ||
-      !Number.isFinite(pan()) ||
-      !Number.isFinite(tilt()) ||
-      Math.abs(pan()) > 60 ||
-      Math.abs(tilt()) > 25 ||
+      !Number.isFinite(posePan) ||
+      !Number.isFinite(poseTilt) ||
+      Math.abs(posePan) > 60 ||
+      Math.abs(poseTilt) > 25 ||
       (presets().length >= 24 && editing() < 0)
     )
       return;
-    const pose = { name: name().trim().slice(0, 40), pan: pan(), tilt: tilt() };
+    const pose = {
+      name: name().trim().slice(0, 40),
+      pan: posePan,
+      tilt: poseTilt,
+    };
     persist(
       editing() < 0
         ? [...presets(), pose]

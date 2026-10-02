@@ -5,11 +5,12 @@
 #include <cstdlib>
 #include <cctype>
 #include <cmath>
+inline bool jsonWhitespace(char c){return c==' ' || c=='\t' || c=='\r' || c=='\n';}
 // Exactly two unique numeric fields; strict JSON syntax and no trailing data.
 inline bool parseMove(const char *body,float &pan,float &tilt){
   // ArduinoJson accepts trailing characters and replaces duplicate keys. This small
   // schema scanner rejects both before the library validates number syntax.
-  const char *p=body;auto ws=[&](){while(*p && std::isspace(static_cast<unsigned char>(*p)))p++;};
+  const char *p=body;auto ws=[&](){while(*p && jsonWhitespace(*p))p++;};
   ws();if(*p!='{')return false;p++;
   bool seenPan=false,seenTilt=false;
   for(int i=0;i<2;i++){
@@ -37,7 +38,7 @@ inline bool parseMove(const char *body,float &pan,float &tilt){
 inline bool parseCalibration(const char *body,int &axis,AxisConfig &config){
   const char *keys[]={"axis","center","low","high","minimum","maximum","invert","speed"};
   double values[8]{};unsigned seen=0;const char *p=body;
-  auto ws=[&](){while(*p && std::isspace(static_cast<unsigned char>(*p)))p++;};
+  auto ws=[&](){while(*p && jsonWhitespace(*p))p++;};
   ws();if(*p++!='{')return false;
   for(int field=0;field<8;field++){
     ws();if(*p!='"')return false;p++;const char *key=p;
@@ -70,7 +71,7 @@ inline bool parseCalibration(const char *body,int &axis,AxisConfig &config){
 }
 inline bool parseJog(const char *body,double &pan,double &tilt,uint32_t &epoch,uint32_t &sequence){
  const char *keys[]={"pan","tilt","epoch","seq"};double values[4]{};unsigned seen=0;
- const char *p=body;auto ws=[&](){while(*p && std::isspace(static_cast<unsigned char>(*p)))p++;};
+ const char *p=body;auto ws=[&](){while(*p && jsonWhitespace(*p))p++;};
  ws();if(*p!='{')return false;p++;
  for(int field=0;field<4;field++){
   ws();if(*p!='"')return false;p++;const char *key=p;
