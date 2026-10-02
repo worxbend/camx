@@ -1,6 +1,6 @@
 {
   "passed": true,
-  "checks": 598,
+  "checks": 613,
   "details": [
     "tripod_nut_retainer: CAD valid, one solid, STL + 3MF watertight/oriented/bed aligned, matching bounds",
     "base: CAD valid, one solid, STL + 3MF watertight/oriented/bed aligned, matching bounds",
@@ -112,6 +112,21 @@
     "packed enclosure usb_pcb_envelope/pan_arm",
     "packed enclosure capacitor_envelope/lid",
     "packed enclosure capacitor_envelope/pan_arm",
+    "rear base cable entry open",
+    "rear pan notch open through platform roof",
+    "rear servo shell exit open",
+    "neutral illustrative cable/tripod_nut_retainer",
+    "neutral illustrative cable/base",
+    "neutral illustrative cable/lid",
+    "neutral illustrative cable/bearing_retainer",
+    "neutral illustrative cable/spindle_keeper",
+    "neutral illustrative cable/drive_arm",
+    "neutral illustrative cable/pan_arm",
+    "neutral illustrative cable/tilt_cover",
+    "neutral illustrative cable/idler_arm",
+    "neutral illustrative cable/idler_cover",
+    "neutral illustrative cable/idler_bearing_retainer",
+    "neutral illustrative cable/camera_cradle",
     "tilt -25: camera_cradle/pan_arm",
     "tilt -25: camera_cradle/drive_arm",
     "tilt -25: camera_cradle/tilt_cover",
@@ -614,7 +629,7 @@
   "limitations": [
     "finite sampled poses, not continuous proof",
     "hardware envelopes approximate",
-    "horns/fasteners/cables not collision modeled",
+    "actual cables, deformation and motion sweep not collision modeled",
     "dimensions unconfirmed",
     "no physical load testing"
   ]

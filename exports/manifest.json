@@ -97,7 +97,7 @@
       "valid": true
     },
     "base": {
-      "volume_mm3": 77150.596,
+      "volume_mm3": 76799.244,
       "print_bounds_mm": [
         100.0,
         82.0,
@@ -107,7 +107,7 @@
       "valid": true
     },
     "lid": {
-      "volume_mm3": 33631.709,
+      "volume_mm3": 33811.709,
       "print_bounds_mm": [
         100.0,
         82.0,
@@ -137,27 +137,27 @@
       "valid": true
     },
     "drive_arm": {
-      "volume_mm3": 17375.358,
+      "volume_mm3": 17575.063,
       "print_bounds_mm": [
         68.6,
-        40.0,
+        44.0,
         29.7
       ],
       "solids": 1,
       "valid": true
     },
     "pan_arm": {
-      "volume_mm3": 52230.43,
+      "volume_mm3": 51134.157,
       "print_bounds_mm": [
         92.0,
-        92.0,
+        91.464,
         16.2
       ],
       "solids": 1,
       "valid": true
     },
     "tilt_cover": {
-      "volume_mm3": 16383.177,
+      "volume_mm3": 15903.204,
       "print_bounds_mm": [
         60.358,
         40.0,
@@ -167,17 +167,17 @@
       "valid": true
     },
     "idler_arm": {
-      "volume_mm3": 18140.152,
+      "volume_mm3": 18339.857,
       "print_bounds_mm": [
         68.5,
-        40.0,
+        44.0,
         29.7
       ],
       "solids": 1,
       "valid": true
     },
     "idler_cover": {
-      "volume_mm3": 16383.177,
+      "volume_mm3": 15903.204,
       "print_bounds_mm": [
         60.358,
         40.0,
@@ -231,6 +231,7 @@
     "idler_outer_washers",
     "idler_axle_M5",
     "camera_envelope",
+    "tilt_cable_route",
     "camera_lens"
   ]
 }

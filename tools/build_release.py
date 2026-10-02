@@ -44,6 +44,10 @@ A symmetrical U-yoke ESP32 camera pan/tilt mechanism based on the owner's revise
 - {validation['checks']} CAD, STL/3MF and sampled-clearance checks passed.
 - Desktop/mobile WebGL interactions, part visibility, view presets, downloads and guide checked with Playwright.
 
+### 🧵 Tilt-servo cable routing
+
+Rear pivot-shell exit, integral arm tie eyes, a through-notch in the rotating platform, and a separate rear base entry provide a documented three-wire lead route. A neutral-only orange cable guide appears in the viewer; it hides during motion/explosion because cable deformation is not simulated. Verify actual connector fit, extension length and freedom from pinching across full travel.
+
 ### 📐 Compact mechanical redesign
 
 100 × 82 × 38 mm base (53% smaller footprint, 55% less bounding-box volume), Ø92 mm pan platform and shallow lower arm shells. Default camera fit is the 55 × 51 × 41 mm PowerConf C200 envelope; exact model and folded-clip fit remain unconfirmed. The existing ESP32, both SG90 servos, USB-C module and capacitor are retained. Verify stability, cable clearance, RF performance and actual component fit on the bench.

@@ -91,6 +91,10 @@ def build(p):
  base+=cyl(cd+4,8,cx,cy,t)-cyl(cd,9,cx,cy,t+1)
  base-=cyl(6,t+3,cx,cy,-1)
  for dx in [-cd/2-3,cd/2+3]:base-=box(2,5,t+2,cx+dx,cy,-1)
+ # Rear stationary cable entry, below the rotating cowl. Feed connector
+ # before closing the lid; two floor slots anchor an insulated zip tie.
+ base-=box(12,t+4,8,0,D/2,H-12)
+ for x in [-9,9]:base-=box(3,4,t+2,x,D/2-t-6,-1)
  # Steel tripod nut sits 1 mm above underside; separate cap prevents it floating.
  base+=cyl(20,3.6,0,0,t)
  base-=cyl(6.8,14,0,0,-1)
@@ -116,8 +120,7 @@ def build(p):
  lid-=cyl(p['bearing_od']+p['fit_clearance'],p['bearing_height']+3,z=bearing_bottom)
  for x,y in screws:
   lid-=cyl(3.3,10,x,y,H-3);lid-=cyl(6.4,2.1,x,y,top-2)
- # Tilt servo wire pass-through exits outside bearing & away from stationary board.
- lid-=box(9,5,10,20,-19,H-3)
+ # Cable enters the rear base wall; keep the lid closed above the electronics.
  parts['lid']=lid
  # Outer bearing retainer: three screws into lid bearing-boss flange.
  rr=(p['bearing_od']+4)/2
@@ -135,6 +138,9 @@ def build(p):
  cowl=cowl.fillet(.8,cowl.edges())
  cowl-=box(14,10,8,0,pan_d/2-1,top+4) # rear cable-loop exit, clear of bearing races
  platform+=cowl
+ # Continuous open rear notch through cowl AND platform roof.
+ platform-=box(14,16,rotary_top-top+2,0,pan_d/2-2,top+.5)
+ for x in [-11,11]:platform-=box(3,4,8,x,pan_d/2-9,rotary_bottom-1)
  platform+=cyl(p['bearing_id']-.2,rotary_bottom-stem_bottom,z=stem_bottom)
  platform+=cyl(p['bearing_id']+6,rotary_bottom-bearing_top-.2,z=bearing_top+.2)
  platform-=box(p['horn_width']+.4,p['horn_length']+.4,p['horn_thickness']+.4,z=stem_bottom-.1)
@@ -175,6 +181,13 @@ def build(p):
    boss-=xhole(1.8,7.2,boss_end-7,y,z)
    right+=boss
    cover_bosses=boss if cover_bosses is None else cover_bosses+boss
+ # Matching rear tie eyes preserve the two-sided outer silhouette.
+ tie_eyes=None
+ for z in [axis-19,rotary_top+12]:
+  eye=rounded(at,8,5,1,ax+at/2,20,z-2.5)
+  eye-=box(2.5,3,7,ax+at/2,21,z-3.5)
+  right+=eye
+  tie_eyes=eye if tie_eyes is None else tie_eyes+eye
  platform+=right
  tilt_origin_x=ax+at+2+p['servo_flange_z']
  tilt_origin_z=axis-p['servo_shaft_offset_x'];body_center_z=tilt_origin_z
@@ -203,11 +216,12 @@ def build(p):
   for y in [-10,10]:
    cover-=xhole(2.3,cover_len+3,cover_x-1,y,z)
    cover-=xhole(4.5,2.2,cover_x+local_len-1.8,y,z)
- cover-=box(8,8,9,cover_x+6,0,rotary_top-1)
+ # Connector-sized rear exit from the pivot cavity, mirrored on passive side.
+ cover-=box(12,30,10,cover_x+13,15,axis-12)
  cover-=right+Pos(0,0,.3)*right # identical interface relief on both shells
  parts['tilt_cover']=cover
  # Passive side has the exact same external shell, with no second motor.
- idler=pod(ax,at)+rounded(14,40,8,5,ax+7,0,rotary_top)+cover_bosses
+ idler=pod(ax,at)+rounded(14,40,8,5,ax+7,0,rotary_top)+cover_bosses+tie_eyes
  idler=idler.mirror(Plane.YZ)
  bearing_x=-ax-at
  idler-=xhole(9,at+2,bearing_x-1,0,axis)
@@ -296,6 +310,16 @@ def build(p):
  hardware['idler_outer_washers']=xhole(7.5,2,bearing_x-2,0,axis)-xhole(5.2,4,bearing_x-3,0,axis)
  hardware['idler_axle_M5']=xhole(5,16,bearing_x-2,0,axis)+xhole(8.5,3.5,bearing_x-5.5,0,axis)
  hardware['camera_envelope']=Pos(0,0,p['camera_bottom_z'])*camera
+ # Illustrative neutral cable route, not a harness or motion-sweep simulation.
+ from build123d import Sphere,Vector
+ route=[(cover_x+20,0,axis),(cover_x+13,24,axis-8),(ax+at/2,27,axis-19),(ax+at/2,27,rotary_top+12),(22,37,rotary_top+3.5),(0,44,rotary_top+4),(0,49,rotary_top-3.5),(0,58,H),(0,D/2,H-8),(0,30,H-14)]
+ cable_segments=[]
+ for a,b in zip(route,route[1:]):
+  v=Vector(b)-Vector(a)
+  segment=Plane(origin=a,z_dir=v)*Cylinder(1.5,v.length,align=MIN)
+  segment+=Pos(*a)*Sphere(1.5);segment+=Pos(*b)*Sphere(1.5)
+  cable_segments.append(segment)
+ hardware['tilt_cable_route']=Compound(children=cable_segments)
  hardware['camera_lens']=yhole(23,2,0,-p['camera_depth']/2-2,p['camera_bottom_z']+p['camera_height']/2)
  meta={'bearing_bottom_z':bearing_bottom,'bearing_top_z':bearing_top,'rotary_bottom_z':rotary_bottom,'tilt_axis':[0,0,axis], 'pan_servo_origin':[pan_body_x,0,pan_origin_z], 'tilt_servo_origin':[tilt_origin_x,0,tilt_origin_z], 'horn_plane_x':horn_plane}
  meta['profile_edge_fillet_mm']=.8
@@ -354,7 +378,7 @@ def main():
   printing.append(Pos((i%3)*180,(i//3)*150,0)*placed)
   print('exported',name,flush=True)
  assembled=[colored(s,n,COLORS[n]) for n,s in parts.items() if n!='fit_coupon']
- for n,s in hardware.items(): assembled.append(colored(s,n,'#214063' if 'servo' in n else '#82949d' if 'bearing' in n else '#273139' if 'camera' in n else '#478365'))
+ for n,s in hardware.items(): assembled.append(colored(s,n,'#214063' if 'servo' in n else '#82949d' if 'bearing' in n else '#273139' if 'camera' in n else '#db8b4e' if n=='tilt_cable_route' else '#478365'))
  assembly=Compound(children=assembled,label='CAMX_complete_reference_assembly')
  printset=Compound(children=printing,label='CAMX_print_layout')
  export_step(assembly,str(out/'assembly/camx.step'));export_brep(assembly,str(out/'assembly/camx.brep'))

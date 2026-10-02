@@ -42,6 +42,7 @@ export class CadStudio{
  update({pan=0,tilt=0,explode=0,hardware=true,wireframe=false}){
   this.pan.rotation.y=-THREE.MathUtils.degToRad(pan);this.tilt.rotation.x=THREE.MathUtils.degToRad(tilt);
   for(const [name,holder]of this.parts){holder.position.copy(holder.userData.original);const off=new THREE.Vector3(...(offsets[name]??[0,0,0])).multiplyScalar(explode/100);holder.position.add(off);holder.visible=!this.hidden.has(name)&&(!holder.userData.hardware||hardware);
+   if(name==='tilt_cable_route')holder.visible=holder.visible&&pan===0&&tilt===0&&explode===0;
    holder.traverse(obj=>{if(obj.isMesh)obj.material.wireframe=wireframe;});
   }
   this.controls.target.y=72+explode*.35;this.controls.update();

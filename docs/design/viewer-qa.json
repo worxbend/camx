@@ -9,6 +9,7 @@
     844
   ],
   "checks": [
+    "neutral cable guide visibility and moving/exploded hiding",
     "all CAD part groups loaded",
     "pan/tilt pivots",
     "explode transforms",

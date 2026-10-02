@@ -3,7 +3,7 @@ import sys,json,itertools,zipfile,xml.etree.ElementTree as ET
 import numpy as np
 from pathlib import Path
 import trimesh
-from build123d import Pos,Rot,Plane
+from build123d import Pos,Rot,Plane,Box,Align
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'cad'))
 from model import build,print_pose
 p=json.loads((ROOT/'cad/parameters.json').read_text());parts,hw,meta=build(p)
@@ -60,6 +60,12 @@ checks.append('USB flange is recessed within exterior wall; PCB is internal')
 for a,b in itertools.combinations(['pan_servo','esp32_envelope','usb_pcb_envelope','capacitor_envelope'],2):clear(hw[a],hw[b],f'packed electronics {a}/{b}')
 for n in ['esp32_envelope','usb_pcb_envelope','capacitor_envelope']:
  for fixed in ['lid','pan_arm']:clear(hw[n],parts[fixed],f'packed enclosure {n}/{fixed}')
+# Connector-sized cable passages remain open in the assembled printed geometry.
+clear(parts['base'],Pos(0,p['base_depth']/2,p['base_height']-10)*Box(8,6,3,align=(Align.CENTER,Align.CENTER,Align.MIN)),'rear base cable entry open')
+clear(parts['pan_arm'],Pos(0,p['pan_platform_diameter']/2-2,p['base_height']+p['lid_thickness']+1)*Box(8,6,20,align=(Align.CENTER,Align.CENTER,Align.MIN)),'rear pan notch open through platform roof')
+clear(parts['tilt_cover'],Pos(p['arm_inner_x']+p['arm_thickness']+13,15,p['tilt_axis_z']-10)*Box(8,10,4,align=(Align.CENTER,Align.CENTER,Align.MIN)),'rear servo shell exit open')
+for name in parts:
+ if name!='fit_coupon':clear(hw['tilt_cable_route'],parts[name],f'neutral illustrative cable/{name}')
 for angle in range(-25,26,5):
  transform=Pos(0,0,p['tilt_axis_z'])*Rot(angle,0,0)*Pos(0,0,-p['tilt_axis_z'])
  for name in ['camera_cradle','camera_envelope']:
@@ -69,6 +75,6 @@ for angle in range(-60,61,10):
  for name in ['pan_arm','drive_arm','camera_cradle','tilt_cover','spindle_keeper','idler_arm','idler_bearing_retainer','idler_cover']:
   shape=Rot(0,0,angle)*parts[name]
   for fixed in ['lid','base','bearing_retainer']:clear(shape,parts[fixed],f'pan {angle}: {name}/{fixed}')
-result={'passed':True,'checks':len(checks),'details':checks,'limits':{'tilt':[-25,25],'pan':[-60,60]},'limitations':['finite sampled poses, not continuous proof','hardware envelopes approximate','horns/fasteners/cables not collision modeled','dimensions unconfirmed','no physical load testing']}
+result={'passed':True,'checks':len(checks),'details':checks,'limits':{'tilt':[-25,25],'pan':[-60,60]},'limitations':['finite sampled poses, not continuous proof','hardware envelopes approximate','actual cables, deformation and motion sweep not collision modeled','dimensions unconfirmed','no physical load testing']}
 (ROOT/'exports/validation.json').write_text(json.dumps(result,indent=2)+'\n')
 print(f'PASS: {len(checks)} CAD/mesh/clearance checks')
