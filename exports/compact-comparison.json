@@ -1,0 +1,35 @@
+{
+  "previous": {
+    "base_mm": [
+      144,
+      120,
+      40.0
+    ],
+    "neutral_assembly_mm": [
+      144.0,
+      120.0,
+      136.0
+    ],
+    "printed_solid_volume_mm3": 392690.7
+  },
+  "compact": {
+    "base_mm": [
+      100,
+      82,
+      38
+    ],
+    "neutral_assembly_mm": [
+      136.6,
+      92.0,
+      127.0
+    ],
+    "printed_solid_volume_mm3": 264593.53
+  },
+  "base_footprint_reduction_percent": 52.5,
+  "printed_solid_volume_reduction_percent": 32.6,
+  "limitations": [
+    "neutral bounding box excludes cable loops and motion sweep",
+    "solid volume is geometric material volume, not slicer filament consumption",
+    "camera model and factory clip fit unconfirmed"
+  ]
+}

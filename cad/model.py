@@ -39,7 +39,7 @@ def build(p):
  pan_origin_z=stem_bottom-p['servo_shaft_z']
  pan_body_x=-p['servo_shaft_offset_x']
  flange_top=pan_origin_z+p['servo_flange_z']
- screws=[(-W/2+11.5,-D/2+11.5),(W/2-11.5,-D/2+11.5),(-W/2+11.5,D/2-11.5),(W/2-11.5,D/2-11.5)]
+ screws=[(x,y) for x in [-W/2+20,W/2-20] for y in [-D/2+9.5,D/2-9.5]]
  parts={};hardware={}
  # Open base; detachable lid. Nonconductive rails capture the ESP32 by its PCB edges.
  base=rounded(W,D,H,R)-rounded(W-2*t,D-2*t,H,R-t,z=t)
@@ -87,7 +87,7 @@ def build(p):
  base-=xhole(p['power_cable_diameter']+1,t+4,W/2-t-1,-22,13)
  for y in [-28,-16]:base-=box(3,3,t+2,W/2-t-8,y,-1)
  # Capacitor cup with lead passage, plus two zip-tie floor slots.
- cx,cy=25,-25;cd=p['capacitor_diameter']+p['fit_clearance']*2
+ cx,cy=22,-22;cd=p['capacitor_diameter']+p['fit_clearance']*2
  base+=cyl(cd+4,8,cx,cy,t)-cyl(cd,9,cx,cy,t+1)
  base-=cyl(6,t+3,cx,cy,-1)
  for dx in [-cd/2-3,cd/2+3]:base-=box(2,5,t+2,cx+dx,cy,-1)
@@ -128,11 +128,12 @@ def build(p):
   lid-=cyl(1.8,12,x,y,top)
  parts['lid']=lid;parts['bearing_retainer']=ret
  # Bearing-supported rotating L arm. Stock horn sits in bottom pocket; no printed spline.
- platform=cyl(116,6,z=rotary_bottom)
+ pan_d=p['pan_platform_diameter']
+ platform=cyl(pan_d,6,z=rotary_bottom)
  platform=platform.fillet(.8,platform.edges())
- cowl=cyl(116,rotary_top-top-.8,z=top+.8)-cyl(110,rotary_bottom-top+2,z=top+.5)
+ cowl=cyl(pan_d,rotary_top-top-.8,z=top+.8)-cyl(pan_d-6,rotary_bottom-top+2,z=top+.5)
  cowl=cowl.fillet(.8,cowl.edges())
- cowl-=box(14,10,8,0,57,top+4) # rear cable-loop exit, clear of bearing races
+ cowl-=box(14,10,8,0,pan_d/2-1,top+4) # rear cable-loop exit, clear of bearing races
  platform+=cowl
  platform+=cyl(p['bearing_id']-.2,rotary_bottom-stem_bottom,z=stem_bottom)
  platform+=cyl(p['bearing_id']+6,rotary_bottom-bearing_top-.2,z=bearing_top+.2)
@@ -152,7 +153,11 @@ def build(p):
   depth=40-2*inset;height=axis+26-rotary_top-2*inset
   profile=Plane.YZ*RectangleRounded(depth,height,min(18-inset,height/2-.1))
   shape=Pos(x,0,(rotary_top+axis+26)/2)*extrude(profile,amount=width)
-  return shape.fillet(.8,[e for e in shape.edges() if e.geom_type==GeomType.CIRCLE])
+  shape=shape.fillet(.8,[e for e in shape.edges() if e.geom_type==GeomType.CIRCLE])
+  # Shallow lower spine and a component-sized upper pivot pod.
+  stem=min(width,p['arm_stem_depth']-inset)
+  shape &= box(stem,depth+2,height+2,x+stem/2,0,rotary_top-1)+xhole(40-2*inset,width+2,x-1,0,axis+4)
+  return shape
  right=pod(ax,at)
  right+=rounded(14,40,8,5,ax+7,0,rotary_top-.1)
  # Integral outer-facing bosses bridge the shell cavity: short M2 screws,
@@ -162,6 +167,8 @@ def build(p):
  boss_end=cover_x+cover_len-3-.3
  cover_bosses=None
  for z in screw_z:
+  local_len=p['arm_stem_depth'] if z==screw_z[0] else cover_len
+  boss_end=cover_x+local_len-3-.3
   for y in [-10,10]:
    boss=xhole(6.5,boss_end-cover_x+.5,cover_x-.5,y,z)
    boss=boss.fillet(.4,boss.edges())
@@ -192,9 +199,10 @@ def build(p):
  medallion=xhole(28,1.5,cover_x+cover_len-.2,0,axis)
  cover+=medallion.fillet(.4,medallion.edges())
  for z in screw_z:
+  local_len=p['arm_stem_depth'] if z==screw_z[0] else cover_len
   for y in [-10,10]:
    cover-=xhole(2.3,cover_len+3,cover_x-1,y,z)
-   cover-=xhole(4.5,2.2,cover_x+cover_len-1.8,y,z)
+   cover-=xhole(4.5,2.2,cover_x+local_len-1.8,y,z)
  cover-=box(8,8,9,cover_x+6,0,rotary_top-1)
  cover-=right+Pos(0,0,.3)*right # identical interface relief on both shells
  parts['tilt_cover']=cover
@@ -245,9 +253,9 @@ def build(p):
  # Matching curved cheeks: mirror the right outer cradle before interface cuts.
  right_cheek=right_cheek_blank
  cradle+=right_cheek.mirror(Plane.YZ)
- left_outer=-36.6
+ left_outer=-ax+.4
  cradle-=xhole(5.3,12,left_outer-1,0,axis)
- hexnut=Pos(-32.6,0,axis)*Rot(0,90,0)*extrude(__import__('build123d').RegularPolygon(8.3/math.sqrt(3),6),amount=5.5)
+ hexnut=Pos(-ax+4.4,0,axis)*Rot(0,90,0)*extrude(__import__('build123d').RegularPolygon(8.3/math.sqrt(3),6),amount=5.5)
  cradle-=hexnut
  # Camera bolt slot gives +/-8 mm fore-aft balance adjustment; underside head recess.
  ty=p['camera_thread_y']

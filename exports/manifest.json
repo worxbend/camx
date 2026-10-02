@@ -1,21 +1,21 @@
 {
   "units": "mm",
   "parameters": {
-    "base_width": 144,
-    "base_depth": 120,
-    "base_height": 40.0,
+    "base_width": 100,
+    "base_depth": 82,
+    "base_height": 38,
     "wall": 3.0,
     "lid_thickness": 4.0,
     "fit_clearance": 0.3,
     "camera_width": 55.0,
-    "camera_depth": 55.0,
-    "camera_height": 50.0,
+    "camera_depth": 51,
+    "camera_height": 41,
     "camera_mass_g": 150.0,
     "camera_thread_y": 0.0,
     "camera_cg_y": 0.0,
-    "camera_bottom_z": 83.0,
-    "tilt_axis_z": 110.0,
-    "arm_inner_x": 37.0,
+    "camera_bottom_z": 80,
+    "tilt_axis_z": 101,
+    "arm_inner_x": 34,
     "servo_length": 23.0,
     "servo_width": 12.2,
     "servo_height": 23.0,
@@ -49,37 +49,39 @@
     "tilt_limit_deg": 25.0,
     "arm_thickness": 6.0,
     "edge_radius": 1.2,
-    "idler_arm_inner_x": -37,
+    "idler_arm_inner_x": -34,
     "idler_bearing_id": 5.0,
     "idler_bearing_od": 16.0,
     "idler_bearing_width": 5.0,
     "idler_spacer_length": 1.4,
-    "base_corner_radius": 22,
+    "base_corner_radius": 12,
     "usb_flange_thickness": 2.0,
     "usb_flange_recess": 2.2,
-    "usb_mount_y": 16.0,
-    "usb_mount_backing": 3.0
+    "usb_mount_y": 8,
+    "usb_mount_backing": 3.0,
+    "pan_platform_diameter": 92,
+    "arm_stem_depth": 7
   },
   "datums": {
-    "bearing_bottom_z": 44.5,
-    "bearing_top_z": 51.5,
-    "rotary_bottom_z": 54.5,
+    "bearing_bottom_z": 42.5,
+    "bearing_top_z": 49.5,
+    "rotary_bottom_z": 52.5,
     "tilt_axis": [
       0,
       0,
-      110.0
+      101
     ],
     "pan_servo_origin": [
       5.0,
       0,
-      15.299999999999997
+      13.299999999999997
     ],
     "tilt_servo_origin": [
-      66.0,
+      63.0,
       0,
-      115.0
+      106.0
     ],
-    "horn_plane_x": 37.0,
+    "horn_plane_x": 34.0,
     "profile_edge_fillet_mm": 0.8,
     "pivot_cap_fillet_mm": 0.4
   },
@@ -95,20 +97,20 @@
       "valid": true
     },
     "base": {
-      "volume_mm3": 122689.065,
+      "volume_mm3": 77150.596,
       "print_bounds_mm": [
-        144.0,
-        120.0,
-        40.0
+        100.0,
+        82.0,
+        38.0
       ],
       "solids": 1,
       "valid": true
     },
     "lid": {
-      "volume_mm3": 69202.272,
+      "volume_mm3": 33631.709,
       "print_bounds_mm": [
-        144.0,
-        120.0,
+        100.0,
+        82.0,
         13.5
       ],
       "solids": 1,
@@ -135,9 +137,9 @@
       "valid": true
     },
     "drive_arm": {
-      "volume_mm3": 20356.951,
+      "volume_mm3": 17375.358,
       "print_bounds_mm": [
-        75.6,
+        68.6,
         40.0,
         29.7
       ],
@@ -145,19 +147,19 @@
       "valid": true
     },
     "pan_arm": {
-      "volume_mm3": 77918.128,
+      "volume_mm3": 52230.43,
       "print_bounds_mm": [
-        116.0,
-        116.0,
+        92.0,
+        92.0,
         16.2
       ],
       "solids": 1,
       "valid": true
     },
     "tilt_cover": {
-      "volume_mm3": 21936.789,
+      "volume_mm3": 16383.177,
       "print_bounds_mm": [
-        75.5,
+        60.358,
         40.0,
         28.3
       ],
@@ -165,9 +167,9 @@
       "valid": true
     },
     "idler_arm": {
-      "volume_mm3": 21121.745,
+      "volume_mm3": 18140.152,
       "print_bounds_mm": [
-        75.5,
+        68.5,
         40.0,
         29.7
       ],
@@ -175,9 +177,9 @@
       "valid": true
     },
     "idler_cover": {
-      "volume_mm3": 21936.789,
+      "volume_mm3": 16383.177,
       "print_bounds_mm": [
-        75.5,
+        60.358,
         40.0,
         28.3
       ],
@@ -195,11 +197,11 @@
       "valid": true
     },
     "camera_cradle": {
-      "volume_mm3": 34342.06,
+      "volume_mm3": 30112.031,
       "print_bounds_mm": [
-        48.5,
-        59.0,
-        73.2
+        42.5,
+        55.0,
+        67.2
       ],
       "solids": 1,
       "valid": true

@@ -42,6 +42,8 @@ checks.append('left/right outer covers are exact mirrored solids')
 from build123d import Cylinder,Align
 boss_tip=p['arm_inner_x']+p['arm_thickness']+p['servo_flange_z']+6-3-.3
 for z in [meta['rotary_bottom_z']+6+15,p['tilt_axis_z']+12]:
+ local_len=p['arm_stem_depth'] if z==meta['rotary_bottom_z']+6+15 else p['servo_flange_z']+6
+ boss_tip=p['arm_inner_x']+p['arm_thickness']+local_len-3-.3
  for y in [-10,10]:
   probe=Pos(boss_tip-2,y+2,z)*Rot(0,90,0)*Cylinder(.3,1,align=(Align.CENTER,Align.CENTER,Align.MIN))
   assert overlap(parts['drive_arm'],probe)>probe.volume-.001
@@ -54,6 +56,10 @@ flange_bounds=hw['usb_flange_envelope'].bounding_box()
 assert abs(flange_bounds.max.X-(p['base_width']/2-p['usb_flange_recess']+p['usb_flange_thickness']))<1e-6
 assert flange_bounds.max.X<=p['base_width']/2
 checks.append('USB flange is recessed within exterior wall; PCB is internal')
+# Packed electronics must remain clear of each other and the lid/cowl.
+for a,b in itertools.combinations(['pan_servo','esp32_envelope','usb_pcb_envelope','capacitor_envelope'],2):clear(hw[a],hw[b],f'packed electronics {a}/{b}')
+for n in ['esp32_envelope','usb_pcb_envelope','capacitor_envelope']:
+ for fixed in ['lid','pan_arm']:clear(hw[n],parts[fixed],f'packed enclosure {n}/{fixed}')
 for angle in range(-25,26,5):
  transform=Pos(0,0,p['tilt_axis_z'])*Rot(angle,0,0)*Pos(0,0,-p['tilt_axis_z'])
  for name in ['camera_cradle','camera_envelope']:
