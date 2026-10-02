@@ -1250,3 +1250,644 @@ button {
     font-size: 13px;
   }
 }
+/* Remote: matte four-lobe directional controller, reflecting the owner's references. */
+:root {
+  background: #101419;
+  --panel: #171e25;
+  --border: #303b44;
+}
+body {
+  background: #101419;
+}
+.nav {
+  background: #111920;
+}
+header h1 {
+  font-size: 46px;
+  letter-spacing: -1.5px;
+}
+header .remote-lead {
+  font-size: 21px;
+  color: #b9cbd8;
+  margin: 8px 0;
+}
+.connection-state {
+  font-size: 14px;
+}
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+.global-stop {
+  min-width: 185px;
+  height: 53px;
+  font-size: 18px;
+  display: flex;
+  gap: 13px;
+  justify-content: center;
+  align-items: center;
+}
+.global-stop span {
+  font-size: 23px;
+}
+.remote-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+.remote-sidebar {
+  display: grid;
+  gap: 16px;
+}
+.remote-panel {
+  padding: 23px;
+}
+.remote-panel h2 {
+  font-size: 26px;
+}
+.commanded-readouts {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin-top: 22px;
+  z-index: 1;
+  pointer-events: none;
+}
+.commanded-readouts > div {
+  background: #111920;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 13px 17px;
+  min-width: 140px;
+}
+.commanded-readouts span {
+  display: block;
+  font-size: 14px;
+}
+.commanded-readouts small {
+  font-size: 12px;
+}
+.commanded-readouts strong {
+  display: block;
+  font-size: 36px;
+  line-height: 1.3;
+  letter-spacing: -1px;
+}
+.direction-pad {
+  position: relative;
+  width: min(100%, 530px);
+  aspect-ratio: 1;
+  margin: -77px auto 15px;
+  isolation: isolate;
+  touch-action: none;
+}
+.pad-silhouette {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  z-index: -1;
+  overflow: visible;
+}
+.direction {
+  position: absolute;
+  width: 28%;
+  height: 29%;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #f4f7f8;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  border-radius: 38%;
+  box-shadow: none;
+}
+.direction-up {
+  left: 36%;
+  top: 3%;
+}
+.direction-left {
+  left: 3%;
+  top: 36%;
+}
+.direction-right {
+  right: 3%;
+  top: 36%;
+}
+.direction-down {
+  left: 36%;
+  bottom: 3%;
+}
+.direction:hover:not(:disabled) {
+  background: #6677861c;
+  border: 0;
+}
+.direction.held,
+.direction.held:hover {
+  color: #b4f3db;
+  background: #a6e8cf19;
+  box-shadow: inset 0 0 30px #a6e8cf0d;
+}
+.direction:disabled {
+  opacity: 0.35;
+}
+.home-center {
+  position: absolute;
+  width: 28%;
+  height: 28%;
+  left: 36%;
+  top: 36%;
+  border-radius: 50%;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, #343e47, #1a2229 72%);
+  border: 3px solid #0b1014;
+  box-shadow:
+    inset 0 2px 4px #75848d88,
+    0 2px 7px #000;
+  color: #f1f6f8;
+}
+.home-center:hover:not(:disabled) {
+  background: linear-gradient(145deg, #46545f, #222d36 72%);
+  border-color: #0b1014;
+}
+.home-center:active:not(:disabled) {
+  box-shadow: inset 0 2px 8px #000;
+}
+.jog-speed {
+  display: flex;
+  gap: 12px;
+  max-width: 530px;
+  margin: 0 auto;
+}
+.jog-speed button {
+  flex: 1;
+  border-radius: 9px;
+  min-height: 66px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  font-size: 15px;
+  background: #1e2932;
+}
+.jog-speed button span {
+  color: #b4c8d8;
+  font-size: 14px;
+}
+.jog-speed .active {
+  color: #072820;
+  background: var(--mint);
+  border-color: var(--mint);
+}
+.jog-speed .active span {
+  color: #072820;
+}
+.jog-speed .active:hover {
+  background: #bcefdc;
+}
+.remote-keyboard {
+  margin: 23px auto 0;
+  max-width: 440px;
+}
+.keyboard-help {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 440px;
+  padding-left: 30px;
+  font-size: 12px;
+}
+.remote-timing {
+  border-top: 1px solid var(--border);
+  text-align: center;
+  padding-top: 17px;
+  margin: 22px 0 0;
+  font-size: 12px;
+}
+.jog-state {
+  display: flex;
+  gap: 16px;
+  border: 1px solid var(--border);
+  background: #111920;
+  border-radius: 8px;
+  padding: 13px 15px;
+  margin-top: 15px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.jog-state strong {
+  color: #edf4f8;
+  font-weight: 550;
+}
+.remote-sidebar .session {
+  padding: 18px;
+}
+.remote-sidebar .session h2 {
+  font-size: 24px;
+}
+.remote-sidebar .session > button {
+  height: 48px;
+  margin-top: 10px;
+  font-size: 15px;
+}
+.remote-sidebar .session .caution {
+  font-size: 12px;
+  padding-top: 0;
+  border-top: 0;
+}
+.remote-sidebar .session .state {
+  margin: 7px 0 13px;
+}
+.remote-sidebar .activity {
+  margin-top: 0;
+}
+.remote-sidebar .activity-head {
+  display: none;
+}
+.remote-sidebar .activity-row {
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 11px;
+  padding: 9px 0;
+}
+.remote-sidebar .activity-row > span {
+  grid-column: 2;
+  font-size: 10px;
+}
+.remote-sidebar .activity-table {
+  max-height: 175px;
+}
+.mobile-arming {
+  display: none;
+}
+@media (min-width: 1500px) {
+  .shell {
+    grid-template-columns: 230px minmax(0, 1fr);
+  }
+  main {
+    padding: 23px 22px 14px;
+  }
+  .remote-layout {
+    grid-template-columns: minmax(0, 1.52fr) minmax(0, 1fr);
+  }
+  .remote-panel {
+    padding: 23px;
+  }
+  .remote-sidebar .panel {
+    padding: 18px;
+  }
+  header {
+    margin-bottom: 18px;
+  }
+  .remote-sidebar .preset-list {
+    margin: 13px 0;
+  }
+  .remote-sidebar .preset > button:first-child {
+    padding: 10px 12px;
+  }
+}
+@media (max-width: 1200px) {
+  .remote-layout {
+    grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr);
+  }
+  .direction-pad {
+    margin-top: -58px;
+  }
+  .commanded-readouts > div {
+    min-width: 105px;
+    padding: 10px;
+  }
+  .commanded-readouts strong {
+    font-size: 29px;
+  }
+  .commanded-readouts span {
+    font-size: 12px;
+  }
+  .commanded-readouts small {
+    font-size: 10px;
+  }
+  header h1 {
+    font-size: 38px;
+  }
+  header .remote-lead {
+    font-size: 17px;
+  }
+  .direction svg {
+    width: 39px;
+    height: 39px;
+  }
+  .home-center svg {
+    width: 43px;
+    height: 43px;
+  }
+  .remote-keyboard {
+    font-size: 13px;
+  }
+}
+@media (max-width: 1000px) {
+  .remote-layout {
+    grid-template-columns: 1fr;
+  }
+  .remote-sidebar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .remote-sidebar .activity {
+    grid-column: 1/-1;
+  }
+  .direction-pad {
+    width: min(100%, 500px);
+  }
+  .commanded-readouts {
+    max-width: 660px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .commanded-readouts > div {
+    min-width: 140px;
+  }
+  .commanded-readouts strong {
+    font-size: 33px;
+  }
+  .commanded-readouts span {
+    font-size: 14px;
+  }
+  .commanded-readouts small {
+    font-size: 12px;
+  }
+  .remote-panel {
+    padding: 23px;
+  }
+}
+@media (max-width: 760px) {
+  main {
+    padding-bottom: 86px;
+  }
+  header h1 {
+    font-size: 31px;
+  }
+  header .remote-lead {
+    font-size: 15px;
+    max-width: 290px;
+  }
+  .header-actions {
+    align-items: center;
+  }
+  .global-stop {
+    position: fixed;
+    bottom: 12px;
+    left: 14px;
+    right: 14px;
+    z-index: 20;
+    width: calc(100% - 28px);
+    height: 54px;
+    box-shadow:
+      0 0 0 10px #101419,
+      0 0 20px 12px #101419;
+    min-width: 0;
+  }
+  .remote-panel {
+    padding: 18px;
+  }
+  .remote-panel h2 {
+    font-size: 23px;
+  }
+  .remote-sidebar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .remote-layout {
+    gap: 14px;
+  }
+  .direction-pad {
+    width: 350px;
+    max-width: 100%;
+    margin-top: -20px;
+  }
+  .commanded-readouts {
+    margin-top: 15px;
+  }
+  .commanded-readouts > div {
+    min-width: 126px;
+    padding: 11px 13px;
+  }
+  .commanded-readouts strong {
+    font-size: 30px;
+  }
+  .remote-keyboard {
+    margin-top: 19px;
+  }
+  .remote-sidebar .session .primary,
+  .remote-sidebar .session > button:not(.danger) {
+    display: none;
+  }
+  .mobile-arming {
+    display: flex;
+    gap: 10px;
+    margin: 15px 0 4px;
+  }
+  .mobile-arming button {
+    flex: 1;
+    min-height: 41px;
+    font-size: 13px;
+  }
+  .remote-sidebar .activity {
+    grid-column: 1/-1;
+  }
+  .remote-sidebar .session .danger {
+    display: none;
+  }
+  .remote-sidebar .session .state {
+    margin-bottom: 5px;
+  }
+  .remote-sidebar .session .caution {
+    margin-top: 8px;
+  }
+}
+@media (max-width: 480px) {
+  .remote-sidebar {
+    grid-template-columns: 1fr;
+  }
+  .remote-sidebar .activity {
+    grid-column: auto;
+  }
+  .remote-panel {
+    padding: 15px;
+  }
+  .remote-panel h2 {
+    font-size: 22px;
+  }
+  .commanded-readouts > div {
+    min-width: 0;
+    width: 47%;
+    padding: 10px 13px;
+  }
+  .commanded-readouts strong {
+    font-size: 29px;
+  }
+  .commanded-readouts span {
+    font-size: 12px;
+  }
+  .commanded-readouts small {
+    font-size: 11px;
+  }
+  .direction-pad {
+    width: 310px;
+    margin: 5px auto 11px;
+  }
+  .jog-speed {
+    gap: 9px;
+  }
+  .jog-speed button {
+    min-height: 60px;
+    font-size: 14px;
+  }
+  .jog-speed button span {
+    font-size: 13px;
+  }
+  .remote-keyboard {
+    font-size: 14px;
+    margin-top: 20px;
+  }
+  .keyboard-help {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .remote-timing {
+    font-size: 11px;
+    margin-top: 16px;
+    padding-top: 14px;
+  }
+  header {
+    margin-bottom: 15px;
+  }
+  header .remote-lead {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  header .connection-state {
+    font-size: 12px;
+  }
+  .direction svg {
+    width: 35px;
+    height: 35px;
+  }
+  .home-center svg {
+    width: 39px;
+    height: 39px;
+  }
+}
+@media (max-width: 760px) {
+  .nav {
+    padding: 16px 18px 9px;
+    border-bottom: 0;
+  }
+  .nav nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    width: 100%;
+    padding: 5px 6px 6px;
+    background: #101820;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    overflow: visible;
+    gap: 0;
+  }
+  .nav nav button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 5px 1px;
+    min-height: 54px;
+    font-size: 9px;
+  }
+  .nav nav button svg {
+    width: 21px;
+    height: 21px;
+  }
+  .nav nav button.selected {
+    border-bottom: 0;
+    color: var(--mint);
+    background: #1d3039;
+  }
+  .nav .studio {
+    font-size: 11px;
+  }
+  main {
+    padding-top: 10px;
+    padding-bottom: 148px;
+  }
+  .global-stop {
+    bottom: 75px;
+    height: 49px;
+    box-shadow:
+      0 0 0 9px #101419,
+      0 0 15px 10px #101419;
+  }
+  .remote-panel h2 {
+    display: none;
+  }
+  .remote-panel {
+    padding-top: 13px;
+  }
+  .commanded-readouts {
+    margin-top: 0;
+  }
+  .mobile-arming {
+    margin: 14px 0 0;
+  }
+  header .remote-lead {
+    max-width: 280px;
+  }
+  .remote-keyboard {
+    margin-top: 15px;
+  }
+  .keyboard-help {
+    margin: 7px auto;
+  }
+}
+@media (max-width: 480px) {
+  .direction-pad {
+    width: 290px;
+    margin-top: 5px;
+    margin-bottom: 8px;
+  }
+  .remote-timing {
+    margin-top: 13px;
+    padding-top: 11px;
+  }
+  .commanded-readouts strong {
+    font-size: 30px;
+  }
+  header h1 {
+    font-size: 28px;
+  }
+  .remote-panel {
+    padding: 13px;
+  }
+  .jog-speed button {
+    min-height: 56px;
+  }
+  .remote-sidebar .panel {
+    padding: 16px;
+  }
+  .connection-state {
+    margin-bottom: 6px;
+  }
+  header {
+    margin-bottom: 10px;
+  }
+}

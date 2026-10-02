@@ -26,4 +26,14 @@ Matte graphite base and matching full-height side shells, restrained raised pan 
 
 Three parallel workstreams implemented the SolidJS 2 client, its browser/transport tests and documentation, and the firmware calibration/heartbeat/filesystem API. Integration added a dependency-free localhost LAN bridge, validated asset staging, partition-table-derived filesystem flashing instructions, standalone client downloads and Pages deployment. The client uses SolidJS 2.0.0-rc.13 with exact runtime/compiler pins and a committed lockfile.
 
-The browser never arms on connection or reconnect. STOP cancels queued motion, calibration requires disabled PWM, and the optional heartbeat begins off. Tokens remain in memory. Nineteen client tests, three bridge tests, firmware compilation and sanitizer parser tests passed locally; simulated devices do not replace physical commissioning. Visual references and actual interface previews are in `docs/design/`.
+The browser never arms on connection or reconnect. STOP cancels queued motion, calibration requires disabled PWM, and the optional heartbeat begins off. Tokens remain in memory. Forty client tests, three bridge tests, firmware compilation and sanitizer parser tests passed locally; simulated devices do not replace physical commissioning. Visual references and actual interface previews are in `docs/design/`.
+
+## Smooth motion update
+
+Replaced constant-rate steps with a local fixed-two-axis Ruckig 0.15.3 S-curve planner. Velocity/acceleration are retained on retarget, both axes share finish time, and full-path position extrema gate acceptance. Safety STOP cancels instantly. The upstream MIT core and provenance are vendored for reproducible offline builds; all firmware source bundles include it. Speed calibration/NVS format and movement JSON stay compatible.
+
+## Held remote update
+
+The supplied phone remote references guided a matte, concave four-lobe direction pad with a circular Home key and persistent STOP. Native SVG/CSS geometry renders the control; generated concepts are visual references, not functional backgrounds. Precision controls and calibration remain separate workspaces. See `docs/design/remote-spec.md` for visual decisions.
+
+Three coordinated workstreams extended firmware motion/lease fencing, the SolidJS transport/remote, and tests/research documentation. The protocol uses normalized velocity pairs, 100 ms refresh and a separate 500 ms nonzero-jog lease. A zero-rate release brakes smoothly; missed renewal immediately latches STOP. Epoch/sequence fencing rejects old mode packets. Pointer capture, cancellation, visibility and keyboard lifecycle are covered by regression tests. Research and tradeoffs are documented in [jog-design.md](jog-design.md). Physical validation remains required.

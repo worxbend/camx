@@ -12,7 +12,7 @@ def zip_files(name,files):
   for p in files:
    if p.is_file() and p.name!='credentials.h':z.write(p,p.relative_to(ROOT))
 zip_files('camx-print-parts.zip',list((ROOT/'exports/parts').glob('*.stl'))+list((ROOT/'exports/parts').glob('*.3mf'))+[ROOT/'exports/assembly/print_layout.3mf',ROOT/'docs/assembly.md',ROOT/'exports/drawings/wiring.svg',ROOT/'exports/drawings/dimensions.svg'])
-zip_files('camx-firmware.zip',list((ROOT/'exports/firmware').glob('*'))+list((ROOT/'firmware/src').glob('*'))+list((ROOT/'firmware/include').glob('*'))+[ROOT/'firmware/platformio.ini',ROOT/'docs/firmware-api.md',ROOT/'docs/control-client.md',ROOT/'tests/http_test.cpp',ROOT/'docs/assembly.md',ROOT/'exports/drawings/wiring.svg'])
+zip_files('camx-firmware.zip',list((ROOT/'exports/firmware').glob('*'))+list((ROOT/'firmware/src').glob('*'))+list((ROOT/'firmware/include').glob('*'))+list((ROOT/'firmware/lib').rglob('*'))+[ROOT/'firmware/platformio.ini',ROOT/'docs/firmware-api.md',ROOT/'docs/control-client.md',ROOT/'docs/jog-design.md',ROOT/'tests/motion_test.cpp',ROOT/'tools/test_motion.py',ROOT/'tests/http_test.cpp',ROOT/'docs/assembly.md',ROOT/'exports/drawings/wiring.svg'])
 with zipfile.ZipFile(dest/'camx-viewer.zip','w',zipfile.ZIP_DEFLATED) as z:
  for p in (ROOT/'viewer/dist').rglob('*'):
   if p.is_file():z.write(p,p.relative_to(ROOT/'viewer/dist'))
@@ -39,8 +39,8 @@ A symmetrical U-yoke ESP32 camera pan/tilt mechanism based on the owner's revise
 
 ### ✅ Build evidence
 
-- ESP32 firmware compiled; motion and bounded HTTP/JSON parser checks passed. Endless station Wi-Fi retry, combined offsets, authenticated disarmed calibration, explicit heartbeat lease, connection-loss hold and isolated HTTP task.
-- SolidJS 2 rc.13 client built; transport/storage/browser and local bridge tests passed. Presets, calibration wizard, mobile controls, import/export, privacy and no-auto-ARM reconnect verified with simulated devices.
+- ESP32 firmware compiled; motion and bounded HTTP/JSON parser checks passed. Jerk-limited S-curves synchronize pan/tilt, preserve velocity and acceleration during retargeting, and check full-path position extrema before accepting motion. Normal jog release brakes smoothly; safety STOP immediately holds. Epoch/sequence fencing rejects stale packets. Endless station Wi-Fi retry, combined offsets, authenticated disarmed calibration, explicit heartbeat lease, connection-loss hold and isolated HTTP task.
+- SolidJS 2 rc.13 client built; transport/storage/browser and local bridge tests passed. Press-and-hold remote, 100 ms rate refresh, 500 ms jog timeout, pointer/keyboard cancellation, presets, calibration wizard, mobile controls, import/export, privacy and no-auto-ARM reconnect verified with simulated devices.
 - {validation['checks']} CAD, STL/3MF and sampled-clearance checks passed.
 - Desktop/mobile WebGL interactions, part visibility, view presets, downloads and guide checked with Playwright.
 

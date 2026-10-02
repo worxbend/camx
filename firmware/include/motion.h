@@ -1,6 +1,7 @@
 #pragma once
 #include <cmath>
 #include <algorithm>
+#include <cstdint>
 struct AxisConfig {
   // Conservative startup envelope; measure actual travel before expanding.
   int center = 1500, low = 1400, high = 1600;
@@ -14,20 +15,21 @@ struct AxisConfig {
   }
 };
 inline float bounded(float v, float lo, float hi) {return std::max(lo, std::min(hi,v));}
-inline int pulseFor(float angle, const AxisConfig &c) {
-  float a = bounded(angle,c.minimum,c.maximum);
-  float fraction = a >= 0 ? a / c.maximum : a / -c.minimum;
+inline double pulseFor(double angle, const AxisConfig &c) {
+  double a = std::max(double(c.minimum),std::min(double(c.maximum),angle));
+  double fraction = a >= 0 ? a / c.maximum : a / -c.minimum;
   if (c.invert) fraction = -fraction;
-  return int(std::lround(c.center + fraction * (fraction >= 0 ? c.high-c.center : c.center-c.low)));
+  return c.center + fraction * (fraction >= 0 ? c.high-c.center : c.center-c.low);
+}
+// Keep fractional microseconds until the final 16-bit, 50 Hz PWM conversion.
+inline uint32_t servoDutyFor(double pulse) {
+  if(!std::isfinite(pulse) || pulse<=0)return 0;
+  return uint32_t(std::lround(std::min(pulse,20000.0)*65535.0/20000.0));
 }
 struct Axis {
   AxisConfig config;
-  float current = 0, target = 0;
-  void tick(float seconds) {
-    float d = target-current, step = config.speed * bounded(seconds,0,0.05f);
-    current += bounded(d,-step,step);
-  }
-  void stop() {target=current;}
+  double current = 0, target = 0, velocity = 0, acceleration = 0;
+  void stop() {target=current;velocity=0;acceleration=0;}
 };
 
 // Validate both axes before changing either target. Repeated offsets are idempotent.

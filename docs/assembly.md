@@ -126,3 +126,7 @@ See [the control-client guide](control-client.md) for browser calibration and de
 `cd viewer && npm ci && npm run build` creates `viewer/dist`, including the viewer, CAD downloads, build guide and firmware. Local development: `npm run dev`; serve the output with `npm run preview`. Assets use relative URLs so the site works under `/camx/` or a custom domain without editing a repository name.
 
 Push the project (including `exports`) to your GitHub repository. In **Settings → Pages → Build and deployment → Source**, choose **GitHub Actions**. `.github/workflows/pages.yml` builds and deploys on pushes to main/master or manual runs. The source repository is `worxbend/camx`. Once Pages is enabled, the workflow publishes the viewer on pushes to main/master.
+
+## Check smooth movement under load
+
+The firmware now ramps velocity and acceleration using a synchronized jerk-limited S-curve. Calibration Speed is a ceiling; reducing it also reduces acceleration and jerk. First test unloaded at 5°/s, then with a balanced camera and secured base. The default pan speed of 25°/s moves 30° in about 2.4 seconds from rest. Observe cable pull, backlash and small-pulse deadband. STOP is immediate and retains torque; DISARM releases it. Long moves still need an explicit heartbeat lease to avoid the five-second watchdog.

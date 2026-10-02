@@ -1,0 +1,9 @@
+{
+  "name": "ruckig",
+  "version": "0.15.3",
+  "license": "MIT",
+  "description": "Vendored offline fixed-DOF jerk-limited trajectory core; cloud and Python bindings excluded",
+  "build": {
+    "flags": "-std=gnu++17"
+  }
+}

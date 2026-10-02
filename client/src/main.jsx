@@ -5,6 +5,7 @@ import {
   initialStatus,
   calibrationFromStatus,
   validCalibration,
+  supportsJog,
 } from "./transport.js";
 import {
   loadPresets,
@@ -12,6 +13,9 @@ import {
   parseBackup,
   downloadBackup,
 } from "./storage.js";
+import { JogController } from "./jog-controller.js";
+import RemotePanel from "./components/RemotePanel.jsx";
+import ActivityPanel from "./components/ActivityPanel.jsx";
 import SessionPanel from "./components/SessionPanel.jsx";
 import PresetsPanel from "./components/PresetsPanel.jsx";
 import ControlPad from "./components/ControlPad.jsx";
@@ -21,7 +25,7 @@ import "./style.css";
 import NavIcon from "./components/NavIcon.jsx";
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 function App() {
-  const [tab, setTab] = createSignal("Control"),
+  const [tab, setTab] = createSignal("Remote"),
     [status, setStatus] = createSignal(initialStatus()),
     [connected, setConnected] = createSignal(false),
     [demo, setDemo] = createSignal(
@@ -46,21 +50,34 @@ function App() {
     ]),
     [selectedAxis, setSelectedAxis] = createSignal(0),
     [wizard, setWizard] = createSignal(0),
-    [busy, setBusy] = createSignal(false);
+    [busy, setBusy] = createSignal(false),
+    [jogFraction, setJogFraction] = createSignal(0.25),
+    [heldVector, setHeldVector] = createSignal({ pan: 0, tilt: 0 }),
+    [holding, setHolding] = createSignal(false);
   let pollBusy = false,
     lastMove = 0,
     pad,
-    imported;
+    imported,
+    jogController;
   const transport = new Transport({
+    onEpochChange: () => jogController?.clear(false),
     onStatus: (s) => {
       setStatus(s);
       setConnected(true);
-      if (!s.armed || s.stopped || s.estop) setLease(false);
+      if (!s.armed || s.stopped || s.estop) {
+        setLease(false);
+        jogController?.clear(false);
+      }
+      if (supportsJog(s) && s.jog_active) {
+        setPan(s.pan);
+        setTilt(s.tilt);
+      }
     },
     onError: (m) => {
       setConnected(false);
       setLease(false);
       setError(m);
+      jogController?.clear(false);
       transport.cancel();
     },
     onLog: (l) =>
@@ -74,6 +91,44 @@ function App() {
     !status().stopped &&
     !status().estop &&
     tab() !== "Calibration";
+  const canJog = () =>
+    movable() &&
+    tab() === "Remote" &&
+    supportsJog(status()) &&
+    !busy() &&
+    document.visibilityState === "visible";
+  const jogError = async (e) => {
+    if (e.name === "AbortError") return;
+    jogController.clear(false);
+    transport.cancelJog();
+    setError(e.message);
+    if (e.status === 409 && connected())
+      await run(() => transport.request("/status", undefined, "GET"));
+  };
+  jogController = new JogController({
+    canJog,
+    send: (p, t) => transport.jog(p, t).catch(jogError),
+    release: () => {
+      if (
+        connected() &&
+        status().armed &&
+        !status().stopped &&
+        supportsJog(status())
+      )
+        return transport.releaseJog().catch(jogError);
+      transport.cancelJog();
+    },
+    onChange: (v, held) => {
+      setHeldVector(v);
+      setHolding(held);
+    },
+  });
+  const setJogSpeed = (value) => {
+    setJogFraction(value);
+    jogController.setFraction(value);
+  };
+  const startHold = (id, p, t) => jogController.start(id, p, t),
+    endHold = (id) => jogController.end(id);
   const run = async (fn) => {
     setError("");
     try {
@@ -84,6 +139,8 @@ function App() {
     }
   };
   const connect = async () => {
+    if (busy()) return;
+    jogController.clear(false);
     setLease(false);
     setConnected(false);
     let base = address().trim();
@@ -111,8 +168,12 @@ function App() {
       ]);
     }
   };
-  const disconnect = () => {
+  const disconnect = async () => {
+    if (busy()) return;
+    setBusy(true);
+    await jogController.clear();
     transport.cancel();
+    setBusy(false);
     setConnected(false);
     setLease(false);
     setError(
@@ -130,6 +191,8 @@ function App() {
       t > status().tilt_max
     )
       return;
+    jogController.clear(false);
+    transport.cancelJog();
     lastMove = Date.now();
     setPan(p);
     setTilt(t);
@@ -148,6 +211,8 @@ function App() {
   };
   const action = async (path) => {
     if (!connected() || busy()) return;
+    jogController.clear(false);
+    transport.cancelJog();
     setBusy(true);
     if (path === "/stop" || path === "/disarm") setLease(false);
     if (path === "/disarm" || path === "/home") transport.cancel();
@@ -161,12 +226,21 @@ function App() {
     setBusy(false);
   };
   const emergency = () => {
+    jogController.clear(false);
+    transport.cancelJog();
     setLease(false);
     setBusy(false);
     if (connected()) run(() => transport.stop());
   };
   const timer = setInterval(async () => {
-    if (!connected() || pollBusy || transport.moving || busy()) return;
+    if (
+      !connected() ||
+      pollBusy ||
+      transport.moving ||
+      transport.jogSending ||
+      busy()
+    )
+      return;
     pollBusy = true;
     try {
       if (
@@ -184,6 +258,7 @@ function App() {
   const visibility = () => {
     if (document.visibilityState !== "visible") {
       setLease(false);
+      jogController.clear();
       transport.pending = null;
     }
   };
@@ -195,30 +270,42 @@ function App() {
     }
     if (
       !keyboard() ||
-      tab() !== "Control" ||
-      !movable() ||
+      tab() !== "Remote" ||
+      !canJog() ||
+      e.repeat ||
       /INPUT|TEXTAREA|SELECT|BUTTON/.test(e.target.tagName) ||
+      e.target.isContentEditable ||
       e.ctrlKey ||
       e.metaKey ||
       e.altKey
     )
       return;
-    const directions = {
-      ArrowLeft: ["pan", -1],
-      ArrowRight: ["pan", 1],
-      ArrowUp: ["tilt", 1],
-      ArrowDown: ["tilt", -1],
-    };
-    if (directions[e.key]) {
+    const direction = {
+      ArrowLeft: [-1, 0],
+      ArrowRight: [1, 0],
+      ArrowUp: [0, 1],
+      ArrowDown: [0, -1],
+    }[e.key];
+    if (direction) {
       e.preventDefault();
-      nudge(...directions[e.key]);
+      startHold("key:" + e.key, ...direction);
     }
   };
+  const keyup = (e) => endHold("key:" + e.key),
+    blur = () => jogController.clear(),
+    pagehide = () => jogController.clear();
   window.addEventListener("keydown", key);
+  window.addEventListener("keyup", keyup);
+  window.addEventListener("blur", blur);
+  window.addEventListener("pagehide", pagehide);
   onCleanup(() => {
     clearInterval(timer);
+    jogController.dispose();
     transport.cancel();
     window.removeEventListener("keydown", key);
+    window.removeEventListener("keyup", keyup);
+    window.removeEventListener("blur", blur);
+    window.removeEventListener("pagehide", pagehide);
     document.removeEventListener("visibilitychange", visibility);
   });
   const updateCal = (axis, field, value) =>
@@ -282,6 +369,7 @@ function App() {
     }
   };
   const selectTab = (t) => {
+    jogController.clear();
     setTab(t);
     if (t === "Calibration") {
       setLease(false);
@@ -367,6 +455,14 @@ function App() {
     setCalibration,
     setPad,
     padMove,
+    jogFraction,
+    heldVector,
+    holding,
+    canJog,
+    startHold,
+    endHold,
+    setJogSpeed,
+    clearHeld: () => jogController.clear(),
   };
 
   return (
@@ -374,11 +470,18 @@ function App() {
       <aside class="nav">
         <a class="brand" href="#" onClick={(e) => e.preventDefault()}>
           CAM<span>X</span>
-          <small>Control desk</small>
+          <small>Remote</small>
         </a>
         <nav aria-label="Main navigation">
           <For
-            each={["Control", "Calibration", "Guides", "Connection", "Presets"]}
+            each={[
+              "Remote",
+              "Precision",
+              "Calibration",
+              "Guides",
+              "Connection",
+              "Presets",
+            ]}
           >
             {(t) => (
               <button
@@ -405,17 +508,24 @@ function App() {
         <header>
           <div>
             <h1>
-              {tab() === "Control"
-                ? "Make your move."
-                : tab() === "Calibration"
-                  ? "Find your center."
-                  : tab() === "Guides"
-                    ? "Build. Balance. Begin."
-                    : tab() === "Connection"
-                      ? "Stay connected."
-                      : "Your angles, saved."}
+              {tab() === "Remote"
+                ? "Move naturally."
+                : tab() === "Precision"
+                  ? "Set your angle."
+                  : tab() === "Calibration"
+                    ? "Find your center."
+                    : tab() === "Guides"
+                      ? "Build. Balance. Begin."
+                      : tab() === "Connection"
+                        ? "Stay connected."
+                        : "Your angles, saved."}
             </h1>
-            <p>
+            <Show when={tab() === "Remote"}>
+              <p class="remote-lead">
+                Hold a direction. Release to slow down and hold.
+              </p>
+            </Show>
+            <p class="connection-state">
               <i class={connected() && !demo() ? "dot mint" : "dot amber"} />
               {demo()
                 ? "Demo mode · no hardware connected"
@@ -424,9 +534,18 @@ function App() {
                   : "Device offline · connect to begin"}
             </p>
           </div>
-          <button class="text-button" onClick={() => selectTab("Connection")}>
-            <NavIcon name="Settings" /> <span>Connection settings</span>
-          </button>
+          <div class="header-actions">
+            <button
+              class="danger global-stop"
+              disabled={!connected()}
+              onClick={emergency}
+            >
+              <span aria-hidden="true">■</span> STOP · hold
+            </button>
+            <button class="text-button" onClick={() => selectTab("Connection")}>
+              <NavIcon name="Settings" /> <span>Connection settings</span>
+            </button>
+          </div>
         </header>
         <Show when={error()}>
           <div class="notice" role="alert">
@@ -436,7 +555,17 @@ function App() {
             </button>
           </div>
         </Show>
-        <Show when={tab() === "Control"}>
+        <Show when={tab() === "Remote"}>
+          <div class="remote-layout">
+            <RemotePanel model={model} />
+            <aside class="remote-sidebar">
+              <SessionPanel model={model} />
+              <PresetsPanel model={model} />
+              <ActivityPanel model={{ logs, setLogs }} />
+            </aside>
+          </div>
+        </Show>
+        <Show when={tab() === "Precision"}>
           <div class="control-grid">
             <ControlPad model={model} />
             <aside class="right-column">
@@ -485,10 +614,10 @@ function App() {
                 Demo mode
               </label>
               <div class="row">
-                <button class="primary" onClick={connect}>
+                <button class="primary" onClick={connect} disabled={busy()}>
                   Connect
                 </button>
-                <button onClick={disconnect} disabled={!connected()}>
+                <button onClick={disconnect} disabled={!connected() || busy()}>
                   Disconnect
                 </button>
               </div>
@@ -542,47 +671,9 @@ function App() {
             </section>
           </div>
         </Show>
-        <section class="panel activity">
-          <div class="panel-heading">
-            <h2>Activity</h2>
-            <button class="text-button" onClick={() => setLogs([])}>
-              Clear activity
-            </button>
-          </div>
-          <div class="activity-table">
-            <div class="activity-head">
-              <span>Time</span>
-              <span>Command</span>
-              <span>Status</span>
-            </div>
-            <Show
-              when={logs().length}
-              fallback={
-                <p class="hint">
-                  Your commands will appear here. Tokens and credentials are
-                  never logged.
-                </p>
-              }
-            >
-              <For each={logs()}>
-                {(l) => (
-                  <div class="activity-row">
-                    <time>{l.time}</time>
-                    <code>
-                      {l.method} {l.path}
-                      {l.body && l.path === "/move"
-                        ? ` ${l.body.pan}° / ${l.body.tilt}°`
-                        : ""}
-                    </code>
-                    <span class={l.ok ? "accepted" : "invalid"}>
-                      {l.ok ? `accepted · ${l.elapsed} ms` : l.message}
-                    </span>
-                  </div>
-                )}
-              </For>
-            </Show>
-          </div>
-        </section>
+        <Show when={tab() !== "Remote"}>
+          <ActivityPanel model={{ logs, setLogs }} />
+        </Show>
         <footer>
           CAMX · Built to move with intention.{" "}
           <span>Commanded estimates · no encoder feedback</span>

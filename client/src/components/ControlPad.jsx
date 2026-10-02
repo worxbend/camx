@@ -151,14 +151,6 @@ export default function ControlPad(props) {
         <button disabled={!movable()} onClick={() => action("/home")}>
           Home
         </button>
-        <label class="check">
-          <input
-            type="checkbox"
-            checked={keyboard()}
-            onChange={(e) => setKeyboard(e.target.checked)}
-          />
-          Keyboard arrows
-        </label>
       </div>
       <p class="hint">
         Degrees are commanded estimates. Escape sends STOP. Arrow keys ignore

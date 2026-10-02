@@ -28,20 +28,36 @@ export const initialStatus = () => ({
   tilt_speed: 15,
   pan_invert: false,
   tilt_invert: false,
-  firmware: "0.4.0-demo",
+  firmware: "0.5.0-demo",
+  control_epoch: 1,
+  jog_seq: 0,
+  jog_pan: 0,
+  jog_tilt: 0,
+  jog_active: false,
+  jog_lease_ms: 500,
 });
 export class Transport {
   constructor({
     onStatus = () => {},
     onError = () => {},
     onLog = () => {},
+    onEpochChange = () => {},
     fetcher = globalThis.fetch.bind(globalThis),
   } = {}) {
-    Object.assign(this, { onStatus, onError, onLog, fetcher });
+    Object.assign(this, { onStatus, onError, onLog, onEpochChange, fetcher });
     this.generation = 0;
     this.sequence = 0;
     this.appliedSequence = 0;
     this.controllers = new Set();
+    this.jogControllers = new Set();
+    this.jogGeneration = 0;
+    this.jogPending = null;
+    this.jogSending = false;
+    this.jogEpoch = null;
+    this.jogSeq = 0;
+    this.demoVelocity = { pan: 0, tilt: 0 };
+    this.demoTick = Date.now();
+    this.demoJogLast = 0;
     this.demoState = initialStatus();
     this.demoLast = Date.now();
     this.pending = null;
@@ -57,19 +73,26 @@ export class Transport {
     this.demo = demo;
     this.demoState = initialStatus();
     this.demoLast = Date.now();
+    this.demoTick = Date.now();
+    this.demoVelocity = { pan: 0, tilt: 0 };
+    this.jogEpoch = null;
+    this.jogSeq = 0;
   }
   cancel() {
+    this.cancelJog();
     this.generation++;
     this.pending = null;
     this.moving = false;
     for (const c of this.controllers) c.abort();
     this.controllers.clear();
   }
-  async request(path, body, method = "POST") {
+  async request(path, body, method = "POST", options = {}) {
     const sequence = ++this.sequence,
       generation = this.generation,
       controller = new AbortController();
     this.controllers.add(controller);
+    const laneGeneration = this.jogGeneration;
+    if (options.lane === "jog") this.jogControllers.add(controller);
     const timer = setTimeout(() => controller.abort(), 2200);
     const start = performance.now();
     try {
@@ -92,6 +115,7 @@ export class Transport {
           body: body === undefined ? undefined : JSON.stringify(body),
           signal: controller.signal,
           cache: "no-store",
+          keepalive: !!options.keepalive,
         });
         const data = await response.json();
         if (!response.ok)
@@ -103,7 +127,10 @@ export class Transport {
       }
       if (!validStatus(state))
         throw new DeviceError("Invalid device status response");
-      if (generation !== this.generation)
+      if (
+        generation !== this.generation ||
+        (options.lane === "jog" && laneGeneration !== this.jogGeneration)
+      )
         throw new DOMException("Cancelled session", "AbortError");
       this.onLog({
         path,
@@ -114,11 +141,15 @@ export class Transport {
       });
       if (sequence >= this.appliedSequence) {
         this.appliedSequence = sequence;
+        this.syncJog(state);
         this.onStatus(state);
       }
       return state;
     } catch (e) {
-      if (generation === this.generation) {
+      if (
+        generation === this.generation &&
+        (options.lane !== "jog" || laneGeneration === this.jogGeneration)
+      ) {
         this.onLog({
           path,
           method,
@@ -135,6 +166,7 @@ export class Transport {
     } finally {
       clearTimeout(timer);
       this.controllers.delete(controller);
+      this.jogControllers.delete(controller);
     }
   }
   async move(pan, tilt) {
@@ -155,21 +187,133 @@ export class Transport {
       if (generation === this.generation) this.moving = false;
     }
   }
+  syncJog(state) {
+    if (!supportsJog(state)) {
+      this.cancelJog();
+      this.jogEpoch = null;
+      return;
+    }
+    if (this.jogEpoch !== state.control_epoch) {
+      this.cancelJog();
+      this.jogEpoch = state.control_epoch;
+      this.jogSeq = state.jog_seq;
+      this.onEpochChange(state.control_epoch);
+    } else this.jogSeq = Math.max(this.jogSeq, state.jog_seq);
+  }
+  cancelJog() {
+    this.jogGeneration++;
+    this.jogPending = null;
+    this.jogSending = false;
+    for (const c of this.jogControllers) c.abort();
+    this.jogControllers.clear();
+  }
+  nextJog(pan, tilt) {
+    if (this.jogEpoch === null)
+      throw new DeviceError(
+        "Hold controls require newer firmware with /jog support",
+        409,
+      );
+    if (
+      !Number.isFinite(pan) ||
+      !Number.isFinite(tilt) ||
+      Math.abs(pan) > 1 ||
+      Math.abs(tilt) > 1
+    )
+      throw new DeviceError("Invalid jog direction", 400);
+    if (this.jogSeq >= 0xffffffff)
+      throw new DeviceError(
+        "Jog sequence exhausted; explicitly ARM again for a new session",
+        409,
+      );
+    return { pan, tilt, epoch: this.jogEpoch, seq: ++this.jogSeq };
+  }
+  async jog(pan, tilt) {
+    this.jogPending = this.nextJog(pan, tilt);
+    if (this.jogSending) return;
+    this.jogSending = true;
+    const generation = this.jogGeneration;
+    try {
+      while (this.jogPending && generation === this.jogGeneration) {
+        const body = this.jogPending;
+        this.jogPending = null;
+        await this.request("/jog", body, "POST", { lane: "jog" });
+      }
+    } catch (e) {
+      if (generation === this.jogGeneration) this.jogPending = null;
+      throw e;
+    } finally {
+      if (generation === this.jogGeneration) this.jogSending = false;
+    }
+  }
+  releaseJog() {
+    if (this.jogEpoch === null) {
+      this.cancelJog();
+      return Promise.resolve(null);
+    }
+    const body = this.nextJog(0, 0);
+    this.cancelJog();
+    return this.request("/jog", body, "POST", { lane: "jog", keepalive: true });
+  }
+  demoAdvance() {
+    const s = this.demoState,
+      now = Date.now();
+    let remaining = Math.min(0.4, (now - this.demoTick) / 1000);
+    this.demoTick = now;
+    if (s.jog_active && now - this.demoJogLast > s.jog_lease_ms) {
+      this.demoInvalidate();
+      s.stopped = true;
+    }
+    while (remaining > 0) {
+      const dt = Math.min(0.01, remaining);
+      remaining -= dt;
+      for (const axis of ["pan", "tilt"]) {
+        const target =
+          s.armed && !s.stopped ? s["jog_" + axis] * s[axis + "_speed"] : 0;
+        // Damped acceleration is a visual mock, not a model of the actual mechanics.
+        this.demoVelocity[axis] +=
+          (target - this.demoVelocity[axis]) * Math.min(1, dt / 0.12);
+        if (Math.abs(this.demoVelocity[axis]) < 0.015)
+          this.demoVelocity[axis] = 0;
+        s[axis] = Math.max(
+          s[axis + "_min"],
+          Math.min(s[axis + "_max"], s[axis] + this.demoVelocity[axis] * dt),
+        );
+        if (this.demoVelocity[axis] !== 0) s[axis + "_target"] = s[axis];
+      }
+    }
+  }
+  demoInvalidate() {
+    const s = this.demoState;
+    s.control_epoch = (s.control_epoch + 1) >>> 0 || 1;
+    s.jog_seq = 0;
+    s.jog_pan = 0;
+    s.jog_tilt = 0;
+    s.jog_active = false;
+    this.demoVelocity = { pan: 0, tilt: 0 };
+  }
   stop() {
     this.cancel();
     return this.request("/stop");
   }
   mock(path, body) {
+    this.demoAdvance();
     const s = this.demoState;
-    if (s.armed && !s.stopped && Date.now() - this.demoLast > 5000)
+    if (s.armed && !s.stopped && Date.now() - this.demoLast > 5000) {
+      this.demoInvalidate();
       s.stopped = true;
+    }
     if (path === "/arm") {
+      this.demoInvalidate();
       s.armed = true;
       s.stopped = false;
       this.demoLast = Date.now();
     }
-    if (path === "/stop") s.stopped = true;
+    if (path === "/stop") {
+      this.demoInvalidate();
+      s.stopped = true;
+    }
     if (path === "/disarm") {
+      this.demoInvalidate();
       s.armed = false;
       s.stopped = true;
     }
@@ -190,8 +334,31 @@ export class Transport {
         p.tilt > s.tilt_max
       )
         throw new DeviceError("Outside calibrated limits", 409);
+      this.demoInvalidate();
       s.pan = s.pan_target = p.pan;
       s.tilt = s.tilt_target = p.tilt;
+      this.demoLast = Date.now();
+    }
+    if (path === "/jog") {
+      if (!s.armed || s.stopped || s.estop)
+        throw new DeviceError("Arm explicitly before jogging", 409);
+      if (
+        !body ||
+        body.epoch !== s.control_epoch ||
+        !Number.isInteger(body.seq) ||
+        body.seq <= s.jog_seq ||
+        body.seq > 0xffffffff ||
+        !Number.isFinite(body.pan) ||
+        !Number.isFinite(body.tilt) ||
+        Math.abs(body.pan) > 1 ||
+        Math.abs(body.tilt) > 1
+      )
+        throw new DeviceError("Stale or invalid jog", 409);
+      s.jog_seq = body.seq;
+      s.jog_pan = body.pan;
+      s.jog_tilt = body.tilt;
+      s.jog_active = body.pan !== 0 || body.tilt !== 0;
+      this.demoJogLast = Date.now();
       this.demoLast = Date.now();
     }
     if (path === "/calibration") {
@@ -252,6 +419,19 @@ export const calibrationFromStatus = (s, axis) => {
 
 export function validStatus(s) {
   if (
+    s &&
+    [
+      "control_epoch",
+      "jog_seq",
+      "jog_pan",
+      "jog_tilt",
+      "jog_active",
+      "jog_lease_ms",
+    ].some((k) => k in s) &&
+    !supportsJog(s)
+  )
+    return false;
+  if (
     !s ||
     !["armed", "stopped", "estop", "pan_invert", "tilt_invert"].every(
       (k) => typeof s[k] === "boolean",
@@ -272,4 +452,22 @@ export function validStatus(s) {
       return false;
   }
   return true;
+}
+
+export function supportsJog(s) {
+  return (
+    s &&
+    Number.isInteger(s.control_epoch) &&
+    s.control_epoch >= 0 &&
+    s.control_epoch <= 0xffffffff &&
+    Number.isInteger(s.jog_seq) &&
+    s.jog_seq >= 0 &&
+    s.jog_seq <= 0xffffffff &&
+    Number.isFinite(s.jog_pan) &&
+    Math.abs(s.jog_pan) <= 1 &&
+    Number.isFinite(s.jog_tilt) &&
+    Math.abs(s.jog_tilt) <= 1 &&
+    typeof s.jog_active === "boolean" &&
+    s.jog_lease_ms === 500
+  );
 }

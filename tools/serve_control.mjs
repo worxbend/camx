@@ -13,7 +13,7 @@ export function privateAddress(address){
  if(net.isIP(ip)===6){const low=ip.toLowerCase();return low==='::1'||/^f[cd][0-9a-f]{2}:/.test(low)||/^fe[89ab][0-9a-f]:/.test(low);}
  return false;
 }
-const routes=new Set(['/status','/arm','/move','/home','/stop','/disarm','/heartbeat','/calibration']);
+const routes=new Set(['/status','/arm','/move','/jog','/home','/stop','/disarm','/heartbeat','/calibration']);
 const mime={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2'};
 export async function createControlServer({deviceUrl='',directory,port=4175}={}){
  let target=null;

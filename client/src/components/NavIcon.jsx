@@ -1,5 +1,6 @@
 const paths = {
-  Control: "M12 3v3m0 12v3M3 12h3m12 0h3M12 8v8M8 12h8",
+  Remote: "M12 2v4m0 12v4M2 12h4m12 0h4M9 9h6v6H9Z",
+  Precision: "M12 3v3m0 12v3M3 12h3m12 0h3M12 8v8M8 12h8",
   Calibration: "M5 4v16M12 4v16M19 4v16M2 8h6m1 8h6m1-6h6",
   Guides: "M12 5v15M3 4c4-1 6 0 9 2 3-2 5-3 9-2v14c-4-1-6 0-9 2-3-2-5-3-9-2Z",
   Connection: "M9 3v5m6-5v5M7 8h10v4a5 5 0 0 1-10 0Zm5 9v4",
@@ -20,7 +21,7 @@ export default function NavIcon(props) {
       aria-hidden="true"
     >
       <path d={paths[props.name]} />
-      {props.name === "Control" ? (
+      {props.name === "Precision" ? (
         <circle cx="12" cy="12" r="7" />
       ) : props.name === "Settings" ? (
         <circle cx="12" cy="12" r="3" />

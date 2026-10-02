@@ -15,6 +15,8 @@ export default function SessionPanel(props) {
     stateLabel,
     action,
     emergency,
+    holding,
+    heldVector,
   } = props.model;
   return (
     <section class="panel session">
@@ -31,7 +33,12 @@ export default function SessionPanel(props) {
       >
         Arm / resume
       </button>
-      <button class="danger" disabled={!connected()} onClick={emergency}>
+      <button
+        aria-label="Session STOP"
+        class="danger"
+        disabled={!connected()}
+        onClick={emergency}
+      >
         STOP · hold
       </button>
       <button
@@ -40,22 +47,49 @@ export default function SessionPanel(props) {
       >
         Disable PWM
       </button>
-      <label class="check">
-        <input
-          type="checkbox"
-          checked={lease()}
-          disabled={!movable()}
-          onChange={(e) => setLease(e.target.checked)}
-        />
-        Maintain control
-      </label>
-      <p class="hint">
-        Renew the 5-second lease while this tab is visible. Starts off; never
-        arms or resumes.
-      </p>
+      <Show when={tab() !== "Remote"}>
+        <label class="check">
+          <input
+            type="checkbox"
+            checked={lease()}
+            disabled={!movable()}
+            onChange={(e) => setLease(e.target.checked)}
+          />
+          Maintain control
+        </label>
+        <p class="hint">
+          Renew the 5-second lease while this tab is visible. Starts off; never
+          arms or resumes.
+        </p>
+      </Show>
       <p class="caution">
         ARM may jump to center. Support the camera before disabling PWM.
       </p>
+      <Show when={tab() === "Remote"}>
+        <div class="jog-state">
+          Jog:
+          <strong>
+            {holding()
+              ? [
+                  heldVector().pan < 0
+                    ? "left"
+                    : heldVector().pan > 0
+                      ? "right"
+                      : "",
+                  heldVector().tilt < 0
+                    ? "down"
+                    : heldVector().tilt > 0
+                      ? "up"
+                      : "",
+                ]
+                  .filter(Boolean)
+                  .join(" + ") || "opposing directions held"
+              : status().jog_active
+                ? "Device jogging"
+                : "Released · holding / easing to rest"}
+          </strong>
+        </div>
+      </Show>
       <dl>
         <dt>Commanded position</dt>
         <dd>

@@ -68,6 +68,28 @@ inline bool parseCalibration(const char *body,int &axis,AxisConfig &config){
   if(!axisConfigSafe(int(values[0]),c))return false;
   axis=int(values[0]);config=c;return true;
 }
+inline bool parseJog(const char *body,double &pan,double &tilt,uint32_t &epoch,uint32_t &sequence){
+ const char *keys[]={"pan","tilt","epoch","seq"};double values[4]{};unsigned seen=0;
+ const char *p=body;auto ws=[&](){while(*p && std::isspace(static_cast<unsigned char>(*p)))p++;};
+ ws();if(*p!='{')return false;p++;
+ for(int field=0;field<4;field++){
+  ws();if(*p!='"')return false;p++;const char *key=p;
+  while(*p && *p!='"')p++;
+  if(!*p)return false;
+  int index=-1;for(int i=0;i<4;i++)if(size_t(p-key)==strlen(keys[i])&&!strncmp(key,keys[i],p-key))index=i;
+  if(index<0 || (seen&(1u<<index)))return false;
+  seen|=1u<<index;p++;ws();if(*p!=':')return false;p++;ws();const char *start=p;
+  if(*p=='-')p++;
+  if(*p=='0')p++;else{if(*p<'1'||*p>'9')return false;while(*p>='0'&&*p<='9')p++;}
+  if(*p=='.'){p++;if(*p<'0'||*p>'9')return false;while(*p>='0'&&*p<='9')p++;}
+  if(*p=='e'||*p=='E'){p++;if(*p=='+'||*p=='-')p++;if(*p<'0'||*p>'9')return false;while(*p>='0'&&*p<='9')p++;}
+  values[index]=strtod(start,nullptr);if(!std::isfinite(values[index]))return false;
+  ws();if(*p!=(field==3?'}':','))return false;p++;
+ }
+ ws();if(*p||seen!=15||std::abs(values[0])>1||std::abs(values[1])>1)return false;
+ for(int i=2;i<4;i++)if(values[i]<0||values[i]>4294967295.0||values[i]!=std::floor(values[i]))return false;
+ pan=values[0];tilt=values[1];epoch=uint32_t(values[2]);sequence=uint32_t(values[3]);return true;
+}
 inline bool controlLeaseAllowed(bool armed,bool stopped,bool physicalStop){return armed && !stopped && !physicalStop;}
 inline bool safeControlPath(const char *path){
   if(strcmp(path,"/control/")==0)return true;

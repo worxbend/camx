@@ -48,8 +48,8 @@ jobs:
         run: pio run -d firmware
       - name: Verify motion logic
         run: |
-          g++ -std=c++17 -Wall -Wextra -Ifirmware/include tests/motion_test.cpp -o /tmp/camx-motion-test
-          /tmp/camx-motion-test
+          python tools/test_motion.py /tmp/camx-motion-profile.csv
+          python tools/motion_profile.py /tmp/camx-motion-profile.csv
       - name: Hardened HTTP parser tests with sanitizers
         run: |
           g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer -Ifirmware/include -Ifirmware/.pio/libdeps/esp32dev/ArduinoJson/src tests/http_test.cpp -o /tmp/camx-http-test
@@ -102,10 +102,12 @@ jobs:
             docs/design/viewer-qa.json
             docs/design/viewer-desktop.png
             docs/design/viewer-mobile.png
-            /tmp/camx-control-desktop.png
-            /tmp/camx-control-mobile.png
-            /tmp/camx-control-calibration.png
-            /tmp/camx-control-guides.png
+            /tmp/camx-remote-desktop.png
+            /tmp/camx-precision-desktop.png
+            /tmp/camx-remote-mobile.png
+            /tmp/camx-precision-mobile.png
+            /tmp/camx-remote-calibration.png
+            /tmp/camx-precision-guides.png
           retention-days: 30
   publish:
     if: startsWith(github.ref, 'refs/tags/')

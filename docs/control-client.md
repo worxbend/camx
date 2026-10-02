@@ -42,18 +42,29 @@ Configure Wi-Fi first by copying `firmware/include/credentials.example.h` to the
 2. Open the real local dashboard. Enter the token if configured and connect. Connecting only reads status; it does not enable PWM.
 3. Inspect the current saved limits, pulse settings, STOP state, and connection status.
 4. Deliberately choose **Arm / resume**. First enable assumes mechanical center and can jump; SG90 servos have no position feedback.
-5. Set pan and tilt together, jog in small steps, or recall a saved pose. Home commands both offsets to zero.
+5. Hold a directional button on the Remote to move; release to brake smoothly. Begin at the default 25% speed. For exact angles, use Precision or a saved pose. Home commands both offsets to zero.
 6. Use **STOP · hold** to cancel motion while retaining holding torque. Use **Disable PWM** only with the camera supported.
 
-One movement request contains both offsets:
+Precision movement sends both absolute offsets:
 
 ```json
 {"pan":15,"tilt":-5}
 ```
 
+Firmware automatically eases every move with a synchronized jerk-limited S-curve. It starts gently, accelerates to at most the calibrated Speed, then slows smoothly to rest. Both axes finish together. Changing targets while moving preserves velocity and acceleration; repeating a target does not restart easing. STOP remains immediate.
+
 Values are degrees from calibrated center, not increments. Firmware positions and the dashboard visualization are commanded estimates, not measured angles. Limits apply to both values atomically.
 
 Connection loss cancels client motion intent; reconnection never automatically arms or resumes it. The firmware also latches STOP after Wi-Fi loss or five seconds without an accepted movement/ARM command. Status polling does not renew this timeout. Any optional live-control lease only renews an explicitly active session; stop it when finished. A browser STOP requires a working network connection: use the physical STOP input for an independent local intervention.
+
+
+The directional remote uses `POST /jog` with paired normalized rates, a control epoch returned by ARM, and a strictly increasing sequence. It renews intent approximately every 100 ms only while held. Releasing sends both rates zero with a newer sequence and starts jerk-limited braking. This may travel farther than an emergency STOP. Pointer cancellation, lost capture, window blur, page hiding, navigation, disconnect, and STOP clear held input. Keyboard arrows support diagonals when enabled and ignore editable fields.
+
+```json
+{"pan":0.25,"tilt":0,"epoch":123456,"seq":1}
+```
+
+A nonzero jog has a separate **500 ms lease**. Missing renewal immediately latches STOP and invalidates the epoch; `/status` and `/heartbeat` cannot extend that lease. A zero/zero release ends the short lease. Resume requires deliberate ARM and a new hold. Old or duplicate sequences and previous epochs cannot revive motion. Older firmware without jog capability disables held directions; absolute Home and Precision remain available. See the [jog design and protocol](jog-design.html) for details and tradeoffs.
 
 ## Calibrate with measured angles
 

@@ -19,7 +19,7 @@ test('bridge forwards complete motion/calibration requests without token leaks a
  const bridge=await createControlServer({deviceUrl:`http://127.0.0.1:${devicePort}`,directory});const port=await listen(bridge),origin=`http://127.0.0.1:${port}`;
  try{
   const motion={pan:12.5,tilt:-4},calibration={axis:0,center:1500,low:1400,high:1600,minimum:-10,maximum:10,invert:false,speed:5};
-  for(const [endpoint,payload] of [['/move',motion],['/calibration',calibration]]){
+  for(const [endpoint,payload] of [['/move',motion],['/jog',{pan:.25,tilt:-.25,epoch:123,seq:7}],['/jog',{pan:0,tilt:0,epoch:123,seq:8}],['/calibration',calibration]]){
    const res=await fetch(origin+endpoint,{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','X-CAMX-Request':'1',Authorization:'Bearer local-test-token'},body:JSON.stringify(payload)});
    assert.equal(res.status,200);assert.equal(await res.text(),'{"armed":false,"stopped":true}');assert.deepEqual(JSON.parse(requests.at(-1).body),payload);assert.equal(requests.at(-1).token,'Bearer local-test-token');
   }

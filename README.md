@@ -57,12 +57,12 @@ Tagged releases publish these files automatically. Between releases, download th
 
 | Part of the project | What it does |
 | --- | --- |
-| [🎛️ Firmware](firmware/) | 50 Hz servo PWM, speed limiting, Wi-Fi controls, serial commands, saved calibration and latched STOP |
+| [🎛️ Firmware](firmware/) | 50 Hz servo PWM, synchronized jerk-limited S-curves, Wi-Fi controls, serial commands, saved calibration and latched STOP |
 | [📐 Parametric CAD](cad/) | Thirteen printable parts, stock servo horn interfaces, adjustable component dimensions |
 | [🌀 3D studio](viewer/) | Orbit, pan/tilt previews, explode, wireframe, part visibility and downloads |
 | [🛠️ Assembly guide](docs/assembly.md) | Wiring, fasteners, print orientation, balance and first startup |
 | [✅ Validation](exports/validation.json) | CAD solids, watertight STL/3MF meshes and sampled clearance checks |
-| [🎛️ Control client](client/) | SolidJS 2 aiming pad, presets, calibration, guides and local bridge |
+| [🎛️ Control client](client/) | SolidJS 2 hold-to-move remote, presets, calibration, guides and local bridge |
 | [🚀 GitHub Actions](.github/workflows/) | Firmware/CAD rebuilds, viewer tests, release downloads and Pages deployment |
 
 ### 🖨️ Thirteen printed pieces. Zero printed spline teeth.
@@ -94,11 +94,13 @@ Use your servos' original horns and center screws. A **6805 bearing (25 × 37 ×
 
 **PWM starts disabled.** STOP holds the current commanded position; DISARM releases torque. Support the camera before disabling PWM. Servo angles are commanded estimates, not encoder measurements. Automatic face tracking would require a separate host application; it is not included in this firmware.
 
-## 🎛️ A whole control desk. In your browser.
+## 🎮 A real remote. In your browser.
 
-The **SolidJS 2** client gives CAMX a real operator interface: touch-friendly pan/tilt pad, sliders and fine nudges, keyboard controls, editable presets, JSON backups, live status and a bounded activity log. A dedicated calibration workspace includes pulse settings, inversion, speed, measured travel limits, and a four-step walkthrough. Wiring, assembly and Wi-Fi guides are built in.
+The **SolidJS 2** client gives CAMX a real operator interface: a sculpted press-and-hold directional pad, diagonal multi-touch, optional held keyboard arrows, three speed levels, editable presets, JSON backups, live status and a bounded activity log. A dedicated calibration workspace includes pulse settings, inversion, speed, measured travel limits, and a four-step walkthrough. Wiring, assembly and Wi-Fi guides are built in.
 
-![CAMX control desk — actual browser interface in demo mode](docs/design/control-desktop-preview.png)
+![CAMX remote — actual browser interface in demo mode](docs/design/remote-desktop-preview.png)
+
+**Hold to move. Release to brake smoothly.** A normalized velocity pair is refreshed every 100 ms. Firmware stops and latches if the jog lease is not renewed within 500 ms. Pointer cancellation, hidden tabs and connection loss clear held inputs; returning never resumes them. The Precision tab retains combined angle targets, sliders and fine nudges. [Why this protocol? →](docs/jog-design.md)
 
 **STOP stays visible.** Connecting never arms the servos. Calibration saves only with PWM disabled. The optional control lease starts off; losing the connection cancels queued motion and reconnection requires deliberate ARM. Tokens remain in memory and stay out of backups and browser storage.
 
@@ -124,6 +126,16 @@ For a desktop control station:
 CAMX_DEVICE_URL=http://DEVICE_IP npm --prefix client run serve
 # Open http://127.0.0.1:4175/control/
 ```
+
+## 🛝 Smooth moves, built into firmware
+
+Each accepted pan/tilt target uses a synchronized **jerk-limited S-curve**: gentle start, gradual acceleration, bounded top speed, then gradual deceleration to zero velocity and acceleration. The existing calibration **Speed** is the maximum speed, not a constant-rate jump. At the default settings, a 30° pan move from rest takes about **2.4 seconds**. Short moves reach a lower peak speed automatically.
+
+New targets preserve the current commanded position, velocity and acceleration. Repeating the same target does not restart the ramp. The complete calculated path must stay within saved limits, including braking before a reversal. **STOP, Wi-Fi loss, watchdog expiry and DISARM remain immediate**; emergency stops do not wait for easing. Normal remote release brakes smoothly; emergency STOP holds immediately. For an absolute move longer than five seconds, explicitly enable the client's Maintain control lease or send accepted heartbeat/commands.
+
+![Actual firmware planner — 30° pan and 15° tilt move](exports/images/motion-profile.png)
+
+The offline planner uses the vendored MIT-licensed [Ruckig 0.15.3 core](firmware/lib/ruckig/UPSTREAM.md). SG90 backlash, deadband, pulse resolution and camera balance still affect physical smoothness; there is no encoder feedback. Physical motion has not yet been verified.
 
 ## 📡 LAN control
 
@@ -154,8 +166,7 @@ npm --prefix client run stage:firmware
 .venv/bin/pio run -d firmware -t buildfs
 .venv/bin/python cad/model.py
 .venv/bin/python tests/validate_cad.py
-g++ -std=c++17 -Ifirmware/include tests/motion_test.cpp -o /tmp/camx-motion-test
-/tmp/camx-motion-test
+.venv/bin/python tools/test_motion.py
 
 # Diagrams + download bundle
 .venv/bin/python tools/diagrams.py
@@ -179,8 +190,8 @@ For browser QA and polished stills, install Chromium with `npx playwright instal
 **Every `v*` tag:** run the same checks, then create a GitHub Release with all five ZIPs and SHA-256 checksums.
 
 ```sh
-git tag v0.4.1
-git push origin v0.4.1
+git tag v0.5.1
+git push origin v0.5.1
 ```
 
 **GitHub Pages:** the separate [Pages workflow](.github/workflows/pages.yml) builds and publishes the live studio and control demo on main/master pushes. Configure **Settings → Pages → Source → GitHub Actions**. All site assets ship locally; repository subpaths such as `/camx/` work without changing the Vite base.
@@ -189,7 +200,7 @@ git push origin v0.4.1
 <summary><strong>🧪 What was checked — and what still needs real hardware</strong></summary>
 
 - Firmware compilation, pure C++ motion tests and HTTP/JSON parser fuzzing with sanitizers.
-- Nineteen control-client tests and three local bridge checks, including paired movement, calibration, cancellation, reconnect and token privacy.
+- Control-client unit/browser tests and three local bridge checks, including paired movement, calibration, cancellation, reconnect and token privacy.
 - Thirteen valid CAD solids; watertight, oriented STL/3MF exports with matching bounds.
 - Sampled pan/tilt clearance; the exact count is recorded in the validation report.
 - Browser loading, pivots, explosion, visibility, wireframe, view presets, reset, downloads and guide navigation.
@@ -198,7 +209,7 @@ git push origin v0.4.1
 
 Still to verify: your component measurements, printer tolerances, actual servo travel, cable slack, load balance, heat, jitter and durability. The opposite 625 bearing reduces cantilever loading. Matching 6 mm side plates, rounded foot joints and a wider base support the symmetrical assembly. The SG90 still carries part of the load; physical durability remains unverified. See the [structural review](docs/structural-review.md). Published SG90 stall torque is not a continuous load rating.
 
-[Workflow decisions](docs/workflow.md) · [Visual concept and review](docs/design/fidelity-review.md) · [Browser QA](docs/design/viewer-qa.json)
+[Workflow decisions](docs/workflow.md) · [Visual concept and review](docs/design/fidelity-review.md) · [Viewer QA](docs/design/viewer-qa.json) · [Remote QA](docs/design/remote-qa.md)
 
 </details>
 

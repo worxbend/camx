@@ -1,14 +1,20 @@
 #include <Arduino.h>
+#include <esp_system.h>
 #include <atomic>
 #include <WiFi.h>
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include "http_request.h"
+#include "motion_planner.h"
+#include "jog_lease.h"
 #include <freertos/semphr.h>
 #include <Preferences.h>
 #include <esp_arduino_version.h>
 #include "motion.h"
 #include "settings.h"
+// Serial and HTTP commands can calculate trajectories; give both task stacks
+// extra headroom for the fixed-size solver's nested numerical routines.
+SET_LOOP_TASK_STACK_SIZE(16384);
 #if __has_include("credentials.h")
 #include "credentials.h"
 #else
@@ -30,40 +36,53 @@ String serialLine;
 bool serialOverflow=false;
 const int pins[2]={PAN_PIN,TILT_PIN};
 
-void duty(int axis,int pulse) {
-  const uint32_t value=pulse ? (uint32_t(pulse)*65535UL+10000UL)/20000UL : 0;
+void duty(int axis,double pulse) {
+  const uint32_t value=servoDutyFor(pulse);
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
   ledcWrite(pins[axis],value);
 #else
   ledcWrite(axis,value);
 #endif
 }
-void halt() {Guard guard;for(auto &a:axes)a.stop(); stopped=true;}
-void disarm() {Guard guard;halt();armed=false;duty(0,0);duty(1,0);}
+MotionPlanner planner;
+JogLease jogLease;
+void halt() {Guard guard;if(!stopped||jogLease.active)jogLease.invalidate();planner.stop(axes); stopped=true;}
+void disarm() {Guard guard;jogLease.invalidate();planner.stop(axes);stopped=true;armed=false;duty(0,0);duty(1,0);}
 bool arm() {
   Guard guard;
   if(digitalRead(STOP_PIN)==LOW)return false;
   // PWM assumes center on first enable; SG90 has no position feedback.
-  if(!armed)for(auto &a:axes){a.current=0;a.target=0;}
-  armed=true;stopped=false;lastCommand=millis();return true;
+  if(!armed){for(auto &a:axes){a.current=0;a.target=0;}planner.stop(axes);}
+  planner.stop(axes);jogLease.invalidate();armed=true;stopped=false;lastCommand=millis();return true;
 }
 bool move(float pan,float tilt) {
   Guard guard;
   if(digitalRead(STOP_PIN)==LOW){halt();return false;}
+  if(jogLease.expired(millis())){halt();return false;}
   if(!armed || stopped || !std::isfinite(pan) || !std::isfinite(tilt))return false;
-  if(!setTargets(axes,pan,tilt))return false;
-  lastCommand=millis();return true;
+  if(!planner.plan(axes,pan,tilt))return false;
+  if(digitalRead(STOP_PIN)==LOW || jogLease.expired(millis())){halt();return false;}
+  jogLease.invalidate();lastCommand=millis();return true;
+}
+bool jog(double pan,double tilt,uint32_t epoch,uint32_t seq){
+  Guard guard;
+  if(digitalRead(STOP_PIN)==LOW){halt();return false;}
+  if(jogLease.expired(millis())){halt();return false;}
+  if(!jogLease.accepts(pan,tilt,epoch,seq,armed,stopped,false))return false;
+  if(!planner.jog(axes,pan,tilt))return false;
+  if(digitalRead(STOP_PIN)==LOW || jogLease.expired(millis())){halt();return false;}
+  jogLease.accept(pan,tilt,seq,millis());lastCommand=millis();return true;
 }
 String status() {
   Guard guard;
-  char out[1024];
-  snprintf(out,sizeof(out),"{\"armed\":%s,\"stopped\":%s,\"estop\":%s,\"pan\":%.2f,\"tilt\":%.2f,\"pan_target\":%.2f,\"tilt_target\":%.2f,\"pan_min\":%.1f,\"pan_max\":%.1f,\"tilt_min\":%.1f,\"tilt_max\":%.1f,\"pan_center\":%d,\"tilt_center\":%d,\"pan_low\":%d,\"pan_high\":%d,\"tilt_low\":%d,\"tilt_high\":%d,\"pan_speed\":%.1f,\"tilt_speed\":%.1f,\"pan_invert\":%s,\"tilt_invert\":%s,\"firmware\":\"0.4.0\"}",
+  char out[1280];
+  snprintf(out,sizeof(out),"{\"armed\":%s,\"stopped\":%s,\"estop\":%s,\"pan\":%.2f,\"tilt\":%.2f,\"pan_target\":%.2f,\"tilt_target\":%.2f,\"pan_min\":%.1f,\"pan_max\":%.1f,\"tilt_min\":%.1f,\"tilt_max\":%.1f,\"pan_center\":%d,\"tilt_center\":%d,\"pan_low\":%d,\"pan_high\":%d,\"tilt_low\":%d,\"tilt_high\":%d,\"pan_speed\":%.1f,\"tilt_speed\":%.1f,\"pan_invert\":%s,\"tilt_invert\":%s,\"firmware\":\"0.5.0\",\"control_epoch\":%u,\"jog_seq\":%u,\"jog_pan\":%.3f,\"jog_tilt\":%.3f,\"jog_active\":%s,\"jog_lease_ms\":500}",
     armed?"true":"false",stopped?"true":"false",digitalRead(STOP_PIN)==LOW?"true":"false",
     axes[0].current,axes[1].current,axes[0].target,axes[1].target,
     axes[0].config.minimum,axes[0].config.maximum,axes[1].config.minimum,axes[1].config.maximum,
     axes[0].config.center,axes[1].config.center,
     axes[0].config.low,axes[0].config.high,axes[1].config.low,axes[1].config.high,
-    axes[0].config.speed,axes[1].config.speed,axes[0].config.invert?"true":"false",axes[1].config.invert?"true":"false");
+    axes[0].config.speed,axes[1].config.speed,axes[0].config.invert?"true":"false",axes[1].config.invert?"true":"false",unsigned(jogLease.epoch),unsigned(jogLease.sequence),jogLease.pan,jogLease.tilt,jogLease.active?"true":"false");
   return out;
 }
 bool number(const String &s,float &value) {
@@ -105,7 +124,7 @@ bool calibrate(int axis,const AxisConfig &c){
   const SavedCalibration saved{2,c.center,c.low,c.high,c.minimum,c.maximum,c.speed,uint8_t(c.invert)};
   bool savedOk=prefs.putBytes(axis?"tilt2":"pan2",&saved,sizeof(saved))==sizeof(saved);
   prefs.end();if(!savedOk)return false;
-  axes[axis].config=c;axes[axis].current=0;axes[axis].target=0;return true;
+  planner.stop(axes);axes[axis].config=c;axes[axis].current=0;axes[axis].target=0;return true;
 }
 const char PAGE[] PROGMEM=R"HTML(<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>CAMX</title><style>body{font:18px system-ui;background:#17222c;color:#f1f6fa;max-width:650px;margin:30px auto;padding:20px}button{padding:14px;margin:6px;border:0;border-radius:8px;cursor:pointer}input{width:100%;margin:20px 0}#stop{background:#ff6565}pre{white-space:pre-wrap}label{display:block}small{color:#b8cad5}</style><h1>CAMX pan &amp; tilt</h1><p><a href="/control/" style="color:#81eed0">Open full CAMX control studio</a> (requires uploaded filesystem)</p><p>Connect the servo supply and check cable slack before arming.</p><button id="arm">Arm / resume</button><button id="home">Home</button><button id="stop">STOP · hold</button><button id="off">Disable PWM</button><label>Pan <output id="pv">0</output>°<input id="pan" type="range" min="-60" max="60" value="0" step="1"></label><label>Tilt <output id="tv">0</output>°<input id="tilt" type="range" min="-25" max="25" value="0" step="1"></label><label>API token (if configured)<input id="token" type="password" autocomplete="off"></label><p id="state" role="status"></p><small>Disable PWM releases holding torque. Support the camera first. Position values are commanded estimates.</small><details><summary>Calibration (PWM disabled)</summary><p>Serial command: CAL axis center low high min max invert speed. See the assembly guide.</p></details><script>
 const $=id=>document.getElementById(id);let ready=false,pending=false,sending=false;
@@ -156,6 +175,11 @@ void route(WiFiClient &client,const HttpRequest &r) {
     float pan,tilt;
     if(!parseMove(r.body,pan,tilt)){response(client,400,"{\"error\":\"expected numeric pan and tilt only\"}");return;}
     ok=move(pan,tilt);
+  }else if(!strcmp(r.path,"/jog")){
+    if(strcmp(r.contentType,"application/json")){response(client,415,"{\"error\":\"application/json required\"}");return;}
+    double pan,tilt;uint32_t epoch,seq;
+    if(!parseJog(r.body,pan,tilt,epoch,seq)){response(client,400,"{\"error\":\"expected normalized pan/tilt and uint32 epoch/seq\"}");return;}
+    ok=jog(pan,tilt,epoch,seq);
   }else if(!strcmp(r.path,"/calibration")){
     if(strcmp(r.contentType,"application/json")){response(client,415,"{\"error\":\"application/json required\"}");return;}
     int axis;AxisConfig config;
@@ -168,7 +192,7 @@ void route(WiFiClient &client,const HttpRequest &r) {
     else if(!strcmp(r.path,"/disarm")){disarm();ok=true;}
     else if(!strcmp(r.path,"/home"))ok=move(0,0);
     else if(!strcmp(r.path,"/heartbeat")){
-      Guard guard;ok=controlLeaseAllowed(armed,stopped,digitalRead(STOP_PIN)==LOW);
+      Guard guard;if(jogLease.expired(millis()))halt();ok=controlLeaseAllowed(armed,stopped,digitalRead(STOP_PIN)==LOW);
       if(ok)lastCommand=millis();
     }
     else{response(client,404,"{\"error\":\"not_found\"}");return;}
@@ -232,7 +256,10 @@ void setup(){
  WiFi.persistent(false);WiFi.mode(WIFI_STA);WiFi.setHostname("camx");WiFi.setAutoReconnect(true);
  if(WIFI_SSID[0])WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
  else Serial.println("Wi-Fi unconfigured: copy credentials.example.h to credentials.h and rebuild.");
- if(xTaskCreatePinnedToCore(httpTask,"camx-http",8192,nullptr,1,nullptr,0)!=pdPASS){Serial.println("HTTP task failed; PWM remains disabled");while(true)delay(1000);}
+ // Wi-Fi radio is active: seed a nonzero boot epoch before exposing HTTP.
+ // This fences delayed packets from an earlier boot (not an authentication token).
+ jogLease.seed(esp_random());
+ if(xTaskCreatePinnedToCore(httpTask,"camx-http",16384,nullptr,1,nullptr,0)!=pdPASS){Serial.println("HTTP task failed; PWM remains disabled");while(true)delay(1000);}
  Serial.println("CAMX ready, PWM DISABLED. Waiting for Wi-Fi; STATUS works over serial.");lastTick=millis();
 }
 void loop(){
@@ -250,10 +277,10 @@ void loop(){
   else {serialOverflow=true;serialLine="";}
  }
  {Guard guard;
- uint32_t now=millis();if(armed && !stopped && uint32_t(now-lastCommand)>COMMAND_TIMEOUT_MS)halt();
+ uint32_t now=millis();if(jogLease.expired(now))halt();if(armed && !stopped && uint32_t(now-lastCommand)>COMMAND_TIMEOUT_MS)halt();
  if(uint32_t(now-lastTick)>=20){float dt=uint32_t(now-lastTick)/1000.0f;lastTick=now;
    if(digitalRead(STOP_PIN)==LOW)halt();
-   if(armed)for(int i=0;i<2;i++){axes[i].tick(dt);duty(i,pulseFor(axes[i].current,axes[i].config));}
+   if(armed){planner.tick(axes,dt);for(int i=0;i<2;i++)duty(i,pulseFor(axes[i].current,axes[i].config));}
  }
  }
  delay(1);

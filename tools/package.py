@@ -16,9 +16,11 @@ html='''<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewpor
 review=markdown.markdown((ROOT/'docs/structural-review.md').read_text(),extensions=['tables','fenced_code'])
 (ROOT/'docs/structural-review.html').write_text(html[:html.index('<h1')]+review+'</main></html>',encoding='utf-8')
 api=markdown.markdown((ROOT/'docs/firmware-api.md').read_text(),extensions=['tables','fenced_code'])
-(ROOT/'docs/firmware-api.html').write_text(html[:html.index('<h1')]+api.replace('control-client.md','control-client.html')+'</main></html>',encoding='utf-8')
+(ROOT/'docs/firmware-api.html').write_text(html[:html.index('<h1')]+api.replace('control-client.md','control-client.html').replace('jog-design.md','jog-design.html')+'</main></html>',encoding='utf-8')
 control=markdown.markdown((ROOT/'docs/control-client.md').read_text(),extensions=['tables','fenced_code'])
-(ROOT/'docs/control-client.html').write_text(html[:html.index('<h1')].replace('CAMX — build guide','CAMX — control guide')+control+'</main></html>',encoding='utf-8')
+(ROOT/'docs/control-client.html').write_text(html[:html.index('<h1')].replace('CAMX — build guide','CAMX — control guide')+control.replace('jog-design.md','jog-design.html')+'</main></html>',encoding='utf-8')
+jog=markdown.markdown((ROOT/'docs/jog-design.md').read_text(),extensions=['tables','fenced_code'])
+(ROOT/'docs/jog-design.html').write_text(html[:html.index('<h1')].replace('CAMX — build guide','CAMX — remote design')+jog+'</main></html>',encoding='utf-8')
 # Add firmware artifacts to generated deliverables. Sources remain included in archive.
 (out/'firmware').mkdir(exist_ok=True)
 for name in ['firmware.bin','firmware.elf','bootloader.bin','partitions.bin','littlefs.bin']:
@@ -48,7 +50,7 @@ files=[p for p in out.rglob('*') if p.is_file() and p.name not in ['camx-files.z
 checks=''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(out))+'\n' for p in sorted(files))
 (out/'checksums.sha256').write_text(checks)
 with zipfile.ZipFile(out/'camx-files.zip','w',zipfile.ZIP_DEFLATED) as z:
- for folder in ['cad','firmware/include','firmware/src','docs','tools','tests','exports']:
+ for folder in ['cad','firmware/include','firmware/src','firmware/lib','docs','tools','tests','exports']:
   for p in (ROOT/folder).rglob('*'):
    if p.is_file() and p.name not in ['camx-files.zip','credentials.h'] and '__pycache__' not in p.parts:z.write(p,p.relative_to(ROOT))
  for n in ['README.md','requirements.txt','firmware/platformio.ini','.gitignore','.gitattributes']:
