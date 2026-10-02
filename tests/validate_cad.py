@@ -40,7 +40,11 @@ assert overlap(mirrored,parts['idler_cover'])>mirrored.volume-.01
 checks.append('left/right outer covers are exact mirrored solids')
 # All printed pieces must have zero-volume mutual overlap at neutral assembly.
 for a,b in itertools.combinations([n for n in parts if n!='fit_coupon'],2):clear(parts[a],parts[b],f'neutral parts {a}/{b}')
-for a,b in [('base','pan_servo'),('base','esp32_envelope'),('base','usb_pcb_envelope'),('base','capacitor_envelope'),('lid','pan_servo'),('pan_arm','bearing_6805'),('drive_arm','tilt_servo'),('camera_cradle','camera_envelope'),('camera_cradle','tilt_servo'),('tilt_cover','tilt_servo'),('idler_arm','idler_bearing_625'),('idler_arm','idler_spacer'),('camera_cradle','idler_axle_M5'),('idler_cover','idler_bearing_625'),('idler_cover','idler_axle_M5')]:clear(parts[a],hw[b],f'neutral hardware {a}/{b}')
+for a,b in [('base','pan_servo'),('base','esp32_envelope'),('base','usb_pcb_envelope'),('base','usb_flange_envelope'),('base','capacitor_envelope'),('lid','pan_servo'),('pan_arm','bearing_6805'),('drive_arm','tilt_servo'),('camera_cradle','camera_envelope'),('camera_cradle','tilt_servo'),('tilt_cover','tilt_servo'),('idler_arm','idler_bearing_625'),('idler_arm','idler_spacer'),('camera_cradle','idler_axle_M5'),('idler_cover','idler_bearing_625'),('idler_cover','idler_axle_M5')]:clear(parts[a],hw[b],f'neutral hardware {a}/{b}')
+flange_bounds=hw['usb_flange_envelope'].bounding_box()
+assert abs(flange_bounds.max.X-(p['base_width']/2-p['usb_flange_recess']+p['usb_flange_thickness']))<1e-6
+assert flange_bounds.max.X<=p['base_width']/2
+checks.append('USB flange is recessed within exterior wall; PCB is internal')
 for angle in range(-25,26,5):
  transform=Pos(0,0,p['tilt_axis_z'])*Rot(angle,0,0)*Pos(0,0,-p['tilt_axis_z'])
  for name in ['camera_cradle','camera_envelope']:

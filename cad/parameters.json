@@ -52,5 +52,9 @@
   "idler_bearing_od": 16.0,
   "idler_bearing_width": 5.0,
   "idler_spacer_length": 1.4,
-  "base_corner_radius": 22
+  "base_corner_radius": 22,
+  "usb_flange_thickness": 2.0,
+  "usb_flange_recess": 2.2,
+  "usb_mount_y": 16.0,
+  "usb_mount_backing": 3.0
 }

@@ -44,6 +44,10 @@ A symmetrical U-yoke ESP32 camera pan/tilt mechanism based on the owner's revise
 - {validation['checks']} CAD, STL/3MF and sampled-clearance checks passed.
 - Desktop/mobile WebGL interactions, part visibility, view presets, downloads and guide checked with Playwright.
 
+### 🔌 Recessed USB-C mounting
+
+The exterior USB-C flange now sits 0.2 mm below the right wall in a measured-fit pocket, with 3 mm reinforced backing. Its PCB remains inside; the fit coupon, hardware model and mounting guide match this change. Confirm actual module dimensions, plug seating and screw-head clearance before printing.
+
 ### 🔎 Final audit
 
 Release cleanup handles sequence exhaustion without escaping UI handlers; new presets capture the latest commanded position after braking. JSON schema scanners enforce standard whitespace. Absolute moves synchronize arrival; jogging runs axes independently. Position readouts remain commanded estimates: standard SG90 servos do not expose measured position.

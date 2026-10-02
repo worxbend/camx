@@ -54,7 +54,11 @@
     "idler_bearing_od": 16.0,
     "idler_bearing_width": 5.0,
     "idler_spacer_length": 1.4,
-    "base_corner_radius": 22
+    "base_corner_radius": 22,
+    "usb_flange_thickness": 2.0,
+    "usb_flange_recess": 2.2,
+    "usb_mount_y": 16.0,
+    "usb_mount_backing": 3.0
   },
   "datums": {
     "bearing_bottom_z": 44.5,
@@ -91,7 +95,7 @@
       "valid": true
     },
     "base": {
-      "volume_mm3": 122317.947,
+      "volume_mm3": 122689.065,
       "print_bounds_mm": [
         144.0,
         120.0,
@@ -201,7 +205,7 @@
       "valid": true
     },
     "fit_coupon": {
-      "volume_mm3": 22506.329,
+      "volume_mm3": 21702.434,
       "print_bounds_mm": [
         105.0,
         68.0,

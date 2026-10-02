@@ -65,16 +65,23 @@ def build(p):
  # Board foot rest; rail slots allow insulated header pins to face the roomy center.
  base+=box(7,elen+4,2,ex,0,t)
  base-=box(16,t+2,12,ex,-D/2,ez+ew/2-6)
- # USB-C module on right wall, matching the revised sketch. Flange screws use through holes and loose nuts.
- usb_x=22;usb_z=18
- usb_transform=Pos(W/2,20,0)*Rot(0,0,-90)*Pos(-usb_x,-D/2,0)
- base-=usb_transform*box(p['usb_socket_width'],t+4,p['usb_socket_height'],usb_x,D/2,usb_z-p['usb_socket_height']/2)
+ # Exterior flange sits 0.2 mm below the wall; PCB and receptacle body are inside.
+ usb_x=22;usb_z=18;front=D/2
+ recess=p['usb_flange_recess'];ft=p['usb_flange_thickness'];back=p['usb_mount_backing']
+ assert recess>=ft and back>=3, 'USB flange must be flush/recessed with >=3 mm backing'
+ usb_transform=Pos(W/2,p['usb_mount_y'],0)*Rot(0,0,-90)*Pos(-usb_x,-front,0)
+ # Reinforce the locally thinned wall before cutting a rectangular flange pocket.
+ base+=usb_transform*box(p['usb_flange_width']+8,recess+back,p['usb_flange_height']+8,usb_x,front-(recess+back)/2,usb_z-p['usb_flange_height']/2-4)
+ base-=usb_transform*box(p['usb_flange_width']+2*p['fit_clearance'],recess+1,p['usb_flange_height']+2*p['fit_clearance'],usb_x,front-(recess-1)/2,usb_z-p['usb_flange_height']/2-p['fit_clearance'])
+ # Body clearance through the backing; only the recessed plate is exposed outside.
+ base-=usb_transform*box(p['usb_pcb_width']+2*p['fit_clearance'],recess+back+2,p['usb_flange_height']-2,usb_x,front-(recess+back)/2,usb_z-(p['usb_flange_height']-2)/2)
  for dx in [-p['usb_flange_hole_pitch']/2,p['usb_flange_hole_pitch']/2]:
-  base-=usb_transform*yhole(p['usb_flange_hole_diameter'],t+4,usb_x+dx,D/2-t-1,usb_z)
- # PCB supports leave underside pads clear, retaining with zip tie through floor.
+  base-=usb_transform*yhole(p['usb_flange_hole_diameter'],recess+back+2,usb_x+dx,front-recess-back-1,usb_z)
+ # Edge rails support the PCB without touching pads; secure with insulated zip ties.
+ pcb_front=front-recess
  for x in [usb_x-p['usb_pcb_width']/2-1,usb_x+p['usb_pcb_width']/2+1]:
-  base+=usb_transform*box(2,p['usb_pcb_depth'],usb_z-3-t,x,D/2-t-p['usb_pcb_depth']/2,t)
-  for y in [D/2-t-5,D/2-t-p['usb_pcb_depth']+4]:
+  base+=usb_transform*box(2,p['usb_pcb_depth'],usb_z-3-t,x,pcb_front-p['usb_pcb_depth']/2,t)
+  for y in [pcb_front-5,pcb_front-p['usb_pcb_depth']+4]:
    base-=usb_transform*box(3,3,t+2,x,y,-1)
  # Separate regulated PSU cable through right wall, away from the USB board.
  base-=xhole(p['power_cable_diameter']+1,t+4,W/2-t-1,-22,13)
@@ -245,7 +252,8 @@ def build(p):
  coupon-=box(p['servo_length']+.7,p['servo_width']+.7,5,19,15,-1)
  coupon-=box(p['horn_width']+.4,p['horn_length']+.4,5,42,11,-1)
  coupon+=cyl(cd+4,7,10,-18,3)-cyl(cd,9,10,-18,2.5)
- coupon-=box(p['usb_socket_width'],p['usb_socket_height'],5,-25,-23,-1)
+ coupon-=box(p['usb_flange_width']+2*p['fit_clearance'],p['usb_flange_height']+2*p['fit_clearance'],recess+1,-25,-23,3-recess)
+ coupon-=box(p['usb_pcb_width']+2*p['fit_clearance'],p['usb_flange_height']-2,5,-25,-23,-1)
  for dx in [-p['usb_flange_hole_pitch']/2,p['usb_flange_hole_pitch']/2]:coupon-=cyl(p['usb_flange_hole_diameter'],5,-25+dx,-23,-1)
  parts['fit_coupon']=coupon
  # Non-print hardware envelopes, intentionally simplified and labelled.
@@ -254,8 +262,12 @@ def build(p):
  hardware['bearing_6805']=cyl(p['bearing_od'],p['bearing_height'],z=bearing_bottom)-cyl(p['bearing_id'],p['bearing_height']+2,z=bearing_bottom-1)
  hardware['esp32_envelope']=box(1.6,elen,ew,ex,0,ez)+box(p['esp32_thickness_envelope']-2,elen-8,ew-4,ex+p['esp32_thickness_envelope']/2-1,0,ez+2)
  hardware['capacitor_envelope']=cyl(p['capacitor_diameter'],p['capacitor_height'],cx,cy,t+1)
- hardware['usb_pcb_envelope']=usb_transform*box(p['usb_pcb_width'],p['usb_pcb_depth'],2,usb_x,D/2-t-p['usb_pcb_depth']/2,usb_z-3)
- hardware['usb_flange_envelope']=usb_transform*box(p['usb_flange_width'],2,p['usb_flange_height'],usb_x,D/2+1,usb_z-p['usb_flange_height']/2)
+ hardware['usb_pcb_envelope']=usb_transform*box(p['usb_pcb_width'],p['usb_pcb_depth'],2,usb_x,pcb_front-p['usb_pcb_depth']/2,usb_z-3)
+ flange=box(p['usb_flange_width'],ft,p['usb_flange_height'],usb_x,front-recess+ft/2,usb_z-p['usb_flange_height']/2)
+ flange-=box(p['usb_socket_width'],ft+2,p['usb_socket_height'],usb_x,front-recess+ft/2,usb_z-p['usb_socket_height']/2)
+ for dx in [-p['usb_flange_hole_pitch']/2,p['usb_flange_hole_pitch']/2]:
+  flange-=yhole(p['usb_flange_hole_diameter'],ft+2,usb_x+dx,front-recess-1,usb_z)
+ hardware['usb_flange_envelope']=usb_transform*flange
  camera=Box(cw,p['camera_depth'],p['camera_height'],align=MIN)
  camera=camera.fillet(4,camera.edges())
  hardware['idler_bearing_625']=xhole(p['idler_bearing_od'],p['idler_bearing_width'],bearing_x,0,axis)-xhole(p['idler_bearing_id'],p['idler_bearing_width']+2,bearing_x-1,0,axis)

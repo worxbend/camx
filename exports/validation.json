@@ -1,6 +1,6 @@
 {
   "passed": true,
-  "checks": 583,
+  "checks": 585,
   "details": [
     "tripod_nut_retainer: CAD valid, one solid, STL + 3MF watertight/oriented/bed aligned, matching bounds",
     "base: CAD valid, one solid, STL + 3MF watertight/oriented/bed aligned, matching bounds",
@@ -85,6 +85,7 @@
     "neutral hardware base/pan_servo",
     "neutral hardware base/esp32_envelope",
     "neutral hardware base/usb_pcb_envelope",
+    "neutral hardware base/usb_flange_envelope",
     "neutral hardware base/capacitor_envelope",
     "neutral hardware lid/pan_servo",
     "neutral hardware pan_arm/bearing_6805",
@@ -97,6 +98,7 @@
     "neutral hardware camera_cradle/idler_axle_M5",
     "neutral hardware idler_cover/idler_bearing_625",
     "neutral hardware idler_cover/idler_axle_M5",
+    "USB flange is recessed within exterior wall; PCB is internal",
     "tilt -25: camera_cradle/pan_arm",
     "tilt -25: camera_cradle/drive_arm",
     "tilt -25: camera_cradle/tilt_cover",

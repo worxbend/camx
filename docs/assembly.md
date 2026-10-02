@@ -43,7 +43,7 @@ CAMX exports thirteen printable parts: base, tripod_nut_retainer, lid, bearing_r
 
 Use PETG for the mechanism, 0.2 mm layers, 4 perimeters, 5 top/bottom layers and ~35–45% infill. The base and lid should print flat; bearing rings and fit coupon flat. The pan platform prints with its upper face down; both arm plates print flat on their inner faces; cradle prints on its side; both matching arm shells print with the closed outer face down. Their raised pivot medallions touch the bed first; add thin supports beneath the surrounding cover face. Exported STL/3MF files already apply these orientations and sit at Z=0. Inspect the slicer preview: local supports may be required under the pan platform/stem, enclosure access openings and cradle transitions. Do not assume a supplied 3MF has printer, material or support settings; it contains geometry in millimetres only. Individual 3MF is preferable to the large print layout on a small bed.
 
-Print `fit_coupon` first: bearing seat, servo cavity, horn pocket, USB socket and hole pitch, capacitor cup. Printed holes may need drill/ream finishing. Keep bearing insertion gentle; do not force it into a tight seat. Sand the spindle until it fits the inner race without wobble; nominal spindle is 24.8 mm. Its axial retainers leave nominal 0.2 mm clearance on each side, so confirm the printed assembly rotates freely. The split-free keeper is screwed on after bearing insertion.
+Print `fit_coupon` first: bearing seat, servo cavity, horn pocket, USB flange recess and hole pitch, capacitor cup. Printed holes may need drill/ream finishing. Keep bearing insertion gentle; do not force it into a tight seat. Sand the spindle until it fits the inner race without wobble; nominal spindle is 24.8 mm. Its axial retainers leave nominal 0.2 mm clearance on each side, so confirm the printed assembly rotates freely. The split-free keeper is screwed on after bearing insertion.
 
 ## Mechanical assembly
 
@@ -130,3 +130,9 @@ Push the project (including `exports`) to your GitHub repository. In **Settings 
 ## Check smooth movement under load
 
 Absolute moves ramp velocity and acceleration using a synchronized jerk-limited S-curve; held jogging applies jerk limits independently to each axis. Calibration Speed is a ceiling; reducing it also reduces acceleration and jerk. First test unloaded at 5°/s, then with a balanced camera and secured base. The default pan speed of 25°/s moves 30° in about 2.4 seconds from rest. Observe cable pull, backlash and small-pulse deadband. STOP is immediate and retains torque; DISARM releases it. Long moves still need an explicit heartbeat lease to avoid the five-second watchdog.
+
+### Recessed USB-C flange
+
+The metal flange remains visible from outside but sits 0.2 mm below the right wall. Its PCB and connector body sit inside. The default pocket is 30.6 × 12.6 mm, 2.2 mm deep, for an assumed 30 × 12 × 2 mm flange. A local reinforcement leaves 3 mm of backing beneath the flange. Mount with two M3 screws and internal washers/nuts; choose screw length after measuring the actual flange and screw-head profile. Use low-profile heads that remain below the outer wall plane, or verify/countersink the metal flange appropriately. The CAD does not assume countersunk holes in your photographed module.
+
+Measure the module before printing: flange width, height, thickness, hole pitch, PCB depth, and receptacle housing. Update `usb_flange_thickness`, `usb_flange_recess` (at least the flange thickness plus screw-head height if heads protrude), and related parameters. Print the fit coupon first. Do not force the PCB into the pocket; secure it by its edges with insulated ties. Verify a real USB plug seats fully in the recessed socket before final assembly.
