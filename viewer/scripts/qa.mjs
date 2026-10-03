@@ -15,6 +15,7 @@ await page.locator('#loading').waitFor({state:'hidden'});
 assert.ok(await page.evaluate(()=>window.camxStudio.parts.get('tilt_cable_route').visible),'neutral cable route shown');await page.waitForTimeout(700);
 await mkdir('../docs/design',{recursive:true});
 assert.equal(await page.locator('h1').textContent(),'Made to move.');
+assert.ok(await page.evaluate(()=>window.camxStudio.parts.get('idler_axle_M5').parent===window.camxStudio.tilt && window.camxStudio.parts.get('idler_jam_nut_M5').parent===window.camxStudio.tilt),'printed axle and captive nut follow camera tilt');
 assert.ok(await page.evaluate(()=>window.camxStudio.parts.get('idler_cover').parent===window.camxStudio.pan),'passive shell follows pan');
 assert.ok(await page.evaluate(()=>window.camxStudio.parts.get('idler_cover').userData.hardware===false),'passive shell is printable');
 for(const [id,value]of [['pan',35],['tilt',-20],['explode',70]])await page.locator('#'+id).evaluate((el,v)=>{el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));},value);

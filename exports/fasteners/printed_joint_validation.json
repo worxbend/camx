@@ -1,0 +1,44 @@
+{
+  "passed": true,
+  "parts": {
+    "printed_idler_shoulder_axle": {
+      "valid_single_solid": true,
+      "watertight": true,
+      "bounds_mm": [
+        15.50000010948015,
+        8.5,
+        8.5000001
+      ]
+    },
+    "printed_idler_captive_nut": {
+      "valid_single_solid": true,
+      "watertight": true,
+      "bounds_mm": [
+        9.237604507034014,
+        8.0000002,
+        2.7000002000000003
+      ]
+    },
+    "printed_idler_outer_washer": {
+      "valid_single_solid": true,
+      "watertight": true,
+      "bounds_mm": [
+        7.5,
+        7.5,
+        2.5
+      ]
+    },
+    "printed_idler_inner_spacer": {
+      "valid_single_solid": true,
+      "watertight": true,
+      "bounds_mm": [
+        7.5,
+        7.5,
+        1.4
+      ]
+    }
+  },
+  "paired_thread_intersection_mm3": 0,
+  "physical_fit_verified": false,
+  "physical_load_tested": false
+}

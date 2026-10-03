@@ -1,6 +1,6 @@
 {
   "passed": true,
-  "checks": 619,
+  "checks": 624,
   "details": [
     "tripod_nut_retainer: CAD valid, one solid, STL + 3MF watertight/oriented/bed aligned, matching bounds",
     "base: CAD valid, one solid, STL + 3MF watertight/oriented/bed aligned, matching bounds",
@@ -99,6 +99,11 @@
     "neutral hardware camera_cradle/idler_axle_M5",
     "neutral hardware idler_cover/idler_bearing_625",
     "neutral hardware idler_cover/idler_axle_M5",
+    "printed paired thread clearance",
+    "printed_idler_shoulder_axle watertight STL and 3MF on bed",
+    "printed_idler_captive_nut watertight STL and 3MF on bed",
+    "printed_idler_outer_washer watertight STL and 3MF on bed",
+    "printed_idler_inner_spacer watertight STL and 3MF on bed",
     "narrow cradle camera/idler_axle_M5",
     "narrow cradle camera/idler_jam_nut_M5",
     "jam nut fits captive pocket",

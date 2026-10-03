@@ -58,7 +58,7 @@ Rear pivot-shell exit, integral arm tie eyes, a through-notch in the rotating pl
 
 ### 📏 Narrowed cradle after first print
 
-Cradle width is 57.2 mm, reduced by exactly 5 mm per side. Matching arm positions move inward on the pan platform. Only camera_cradle and pan_arm require reprinting; the remaining part print geometry is unchanged. Use a metal M5 × 12 axle, a 2.5 mm outer washer stack, the 1.4 mm spacer and a 2.7 mm M5 jam nut. Physical fit is still to be checked.
+Cradle width is 57.2 mm, reduced by exactly 5 mm per side. Matching arm positions move inward on the pan platform. Only camera_cradle and pan_arm require reprinting; the remaining part print geometry is unchanged. Use the matched printed shoulder axle, captive nut, 2.5 mm washer and 1.4 mm spacer. No metal screw or nut is needed in that joint; its print fit and loaded strength remain unverified. Physical fit is still to be checked.
 
 ### 🔩 Short cover screws
 

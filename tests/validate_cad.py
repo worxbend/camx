@@ -52,6 +52,23 @@ checks.append('both arms contain four near-cover standoffs for short screws')
 # All printed pieces must have zero-volume mutual overlap at neutral assembly.
 for a,b in itertools.combinations([n for n in parts if n!='fit_coupon'],2):clear(parts[a],parts[b],f'neutral parts {a}/{b}')
 for a,b in [('base','pan_servo'),('base','esp32_envelope'),('base','usb_pcb_envelope'),('base','usb_flange_envelope'),('base','capacitor_envelope'),('lid','pan_servo'),('pan_arm','bearing_6805'),('drive_arm','tilt_servo'),('camera_cradle','camera_envelope'),('camera_cradle','tilt_servo'),('tilt_cover','tilt_servo'),('idler_arm','idler_bearing_625'),('idler_arm','idler_spacer'),('camera_cradle','idler_axle_M5'),('idler_cover','idler_bearing_625'),('idler_cover','idler_axle_M5')]:clear(parts[a],hw[b],f'neutral hardware {a}/{b}')
+# Paired printed joint meshes and clearances are validated independently of the 13 structural pieces.
+from fasteners import printed_joint
+pin,nut=printed_joint(p)
+seated=Pos(0,0,3.5+p['idler_outer_washer_stack']+p['idler_bearing_width']+p['idler_spacer_length'])*nut
+clear(pin,seated,'printed paired thread clearance')
+for name in ['printed_idler_shoulder_axle','printed_idler_captive_nut','printed_idler_outer_washer','printed_idler_inner_spacer']:
+ mesh=trimesh.load(ROOT/'exports/fasteners'/f'{name}.stl',force='mesh')
+ assert mesh.is_watertight and mesh.is_winding_consistent and len(mesh.split())==1,name
+ assert mesh.bounds[0,2]>=-1e-4,name
+ with zipfile.ZipFile(ROOT/'exports/fasteners'/f'{name}.3mf') as archive:
+  xml=ET.fromstring(archive.read('3D/3dmodel.model'));node=xml.find('.//{*}mesh')
+  vertices=[[float(v.attrib[k]) for k in ['x','y','z']] for v in node.findall('{*}vertices/{*}vertex')]
+  faces=[[int(v.attrib[k]) for k in ['v1','v2','v3']] for v in node.findall('{*}triangles/{*}triangle')]
+  mf=trimesh.Trimesh(vertices=vertices,faces=faces,process=True)
+  assert mf.is_watertight and mf.is_winding_consistent,name+' 3MF'
+  assert np.max(np.abs(mf.bounds-mesh.bounds))<.1,name+' STL/3MF mismatch'
+ checks.append(name+' watertight STL and 3MF on bed')
 for n in ['idler_axle_M5','idler_jam_nut_M5']:
  clear(hw[n],hw['camera_envelope'],f'narrow cradle camera/{n}')
 clear(parts['camera_cradle'],hw['idler_jam_nut_M5'],'jam nut fits captive pocket')

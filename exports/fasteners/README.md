@@ -1,4 +1,6 @@
-# Opposite-side cradle axle
+# Printed joint and legacy screw reference
+
+For the requested printed assembly use printed_idler_shoulder_axle and printed_idler_captive_nut, plus the supplied washer/spacer. See PRINTED_JOINT.md. The FIT_ONLY file below is a separate legacy reference.
 
 M5 × 12 mm under-head length; right-hand 0.8 mm pitch; 8.5 mm diameter × 3.5 mm slotted head. Simplified thread geometry, not an ISO tolerance-qualified manufacturing drawing.
 

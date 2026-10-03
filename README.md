@@ -227,7 +227,7 @@ Built with **build123d · PlatformIO · SolidJS 2 · Three.js** by **worxbend**.
 
 </div>
 
-🔩 **Opposite bearing-side axle:** the current source bundle also includes a [threaded M5 × 12 fit-check model](exports/fasteners/idler_axle_M5x12_FIT_ONLY.stl), with STEP, 3MF and vector drawings beside it. Use a metal screw for the loaded assembly. The cradle is now 57.2 mm wide, reduced by 5 mm per side, with a 51 mm clear camera opening. Use a 2.7 mm M5 jam nut and a 2.5 mm outer washer stack.
+🔩 **Printed bearing-side joint:** print the [shoulder axle](exports/fasteners/printed_idler_shoulder_axle.stl), [matching captive nut](exports/fasteners/printed_idler_captive_nut.stl), outer washer and inner spacer from the [kit ZIP](exports/fasteners/printed-idler-kit.zip). No metal screw or nut is needed in this joint. Keep the 625 bearing. PETG/nylon and a supported fit/load trial are recommended; printed strength and durability remain unverified. The cradle remains 57.2 mm wide with a 51 mm camera opening.
 
 📶 **Automatic recovery:** transient control-request failures no longer require manually reconnecting. The client retries status indefinitely and restores controls when the ESP32 responds, while cancelling interrupted holds and retaining explicit ARM after a device STOP.
 

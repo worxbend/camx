@@ -314,6 +314,11 @@ def build(p):
  hardware['idler_axle_M5']=xhole(5,p['idler_axle_length'],bearing_x-washer,0,axis)+xhole(8.5,3.5,bearing_x-washer-3.5,0,axis)
  nut=Pos(left_outer,0,axis)*Rot(0,90,0)*__import__('build123d').extrude(__import__('build123d').RegularPolygon(8/math.sqrt(3),6),amount=p['idler_nut_thickness'])
  hardware['idler_jam_nut_M5']=nut-xhole(5.2,p['idler_nut_thickness']+2,left_outer-1,0,axis)
+ # Printed paired joint replaces the former metal screw/nut reference.
+ from fasteners import printed_joint
+ printed_pin,printed_nut=printed_joint(p)
+ hardware['idler_axle_M5']=Pos(bearing_x-washer-3.5,0,axis)*Rot(0,90,0)*printed_pin
+ hardware['idler_jam_nut_M5']=Pos(left_outer,0,axis)*Rot(0,90,0)*printed_nut
  hardware['camera_envelope']=Pos(0,0,p['camera_bottom_z'])*camera
  # Illustrative neutral cable route, not a harness or motion-sweep simulation.
  from build123d import Sphere,Vector

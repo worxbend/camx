@@ -45,6 +45,13 @@ shutil.copytree(ROOT/'client/dist',out/'control')
 boot_app=Path.home()/'.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin'
 if boot_app.exists():shutil.copy2(boot_app,out/'firmware/boot_app0.bin')
 (out/'firmware/README.txt').write_text(f"Prefer PlatformIO upload. For classic ESP32 / 4MB only:\npython -m esptool --chip esp32 --port YOUR_PORT write_flash 0x1000 bootloader.bin 0x8000 partitions.bin 0xe000 boot_app0.bin 0x10000 firmware.bin {fs_partition['offset']} littlefs.bin\nFilesystem address is validated in flash-layout.json for this build; do not reuse with a different partition table.\nPublic binaries are Wi-Fi unconfigured. Copy firmware/include/credentials.example.h to credentials.h, set your credentials and token, then build locally. Never publish configured binaries. Never flash only firmware.bin at address zero. See docs/assembly.md for wiring and first startup.\n")
+# Dedicated small download for the requested printed bearing-side joint.
+with zipfile.ZipFile(out/'fasteners/printed-idler-kit.zip','w',zipfile.ZIP_DEFLATED) as kit:
+ for p in sorted((out/'fasteners').glob('printed_*')):
+  if p.is_file():kit.write(p,p.relative_to(out))
+ kit.write(out/'fasteners/PRINTED_JOINT.md','PRINTED_JOINT.md')
+ for p in sorted((out/'images').glob('printed_idler_joint.*')):
+  kit.write(p,p.relative_to(out))
 # Hash every generated file before assembling the archive. Do not recurse into prior archives.
 files=[p for p in out.rglob('*') if p.is_file() and p.name not in ['camx-files.zip','checksums.sha256']]
 checks=''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+str(p.relative_to(out))+'\n' for p in sorted(files))
