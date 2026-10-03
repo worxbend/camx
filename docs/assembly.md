@@ -97,6 +97,17 @@ The rich [SolidJS control client](control-client.md) adds browser calibration, p
 
 Build: `.venv/bin/pio run -d firmware`. Flash: `.venv/bin/pio run -d firmware -t upload --upload-port /dev/ttyUSB0` (actual device can be `/dev/ttyACM0`). Monitor: `.venv/bin/pio device monitor -b 115200 -p /dev/ttyUSB0`.
 
+### Upload loses communication after switching baud rate
+
+The project uses `upload_speed = 115200` for firmware and filesystem uploads. If esptool identifies the chip and runs its stub but reports `Unable to verify flash chip connection (No serial data received.)` after changing to 460800 baud, first retry at 115200. The compiled image size is not the cause of that serial timeout.
+
+```sh
+pio run -d firmware -t upload --upload-port /dev/ttyUSB0
+pio run -d firmware -t uploadfs --upload-port /dev/ttyUSB0
+```
+
+Close serial monitors, disconnect the external PSU and servo power leads, and use the ESP32 programming USB port with a short data cable directly connected to the computer. If it still fails, try another cable/port. A diagnostic `python -m esptool --chip esp32 --port /dev/ttyUSB0 --baud 115200 flash_id` checks communication without writing flash; run it in the environment containing esptool. If necessary, repeat at 9600 baud. A crystal-frequency warning is a clue to investigate the serial link and board clock, not proof that the physical crystal has the reported frequency. Do not change the firmware clock settings based only on that warning. If communication remains unreliable with isolated USB power and a known-good cable, inspect the board and connections, especially external wiring on flash-related pins. See [Espressif upload troubleshooting](https://docs.espressif.com/projects/esptool/en/release-v4/esp32/troubleshooting.html).
+
 Copy `firmware/include/credentials.example.h` to `firmware/include/credentials.h` (ignored by Git), set `WIFI_SSID`, `WIFI_PASSWORD` and preferably `API_TOKEN`, then rebuild and flash. ESP32 joins your 2.4 GHz network in station mode. Serial prints the assigned IP; open that address from the same LAN. It retries every 10 seconds without blocking the motion loop, holds and latches STOP on detected connection loss, and never resumes motion automatically after reconnect. No setup AP is created. Public binaries have no credentials and require a local build for Wi-Fi use. Configured binaries contain secrets: keep them private. See [HTTP API](firmware-api.md). GitHub Pages only simulates geometry.
 
 Serial uses newline-terminated commands at 115200 baud:
