@@ -36,8 +36,8 @@ export const guides = [
     steps: [
       "ARM enables PWM and may jump to center on first enable; SG90 servos have no position feedback. Keep the camera supported. Never ARM while hardware STOP is pressed.",
       "Remote directions send a normalized pan/tilt rate every 100 ms while held. Release sends a newer zero pair; the ESP32 owns smooth acceleration and braking. Slow starts at 25% of each calibrated speed. Precision pad, sliders, and presets retain atomic absolute offsets.",
-      "Held motion has a separate 500 ms lease: a missing refresh immediately latches STOP and invalidates the session. Accepted normal release smoothly brakes instead. The separate 5-second command watchdog still applies; Maintain control is optional in Precision, and cannot renew a jog lease.",
-      "STOP cancels queued moves and holds position. Disable PWM releases holding torque. Network loss cancels motion; reconnecting never arms or replays targets. Return to the device and ARM explicitly after inspecting it.",
+      "Held motion has a separate 500 ms lease: a missing refresh immediately holds position and invalidates the session. Accepted normal release smoothly brakes instead. The separate 5-second command watchdog still applies; Maintain control is optional in Precision, and cannot renew a jog lease.",
+      "STOP cancels queued moves and holds position. Disable PWM releases holding torque. Network loss cancels motion; reconnecting never arms or replays targets. After a transport timeout, fresh input can move again; explicit STOP or PWM disable still requires ARM.",
     ],
   },
   {

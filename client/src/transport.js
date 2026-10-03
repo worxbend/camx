@@ -265,7 +265,7 @@ export class Transport {
     this.demoTick = now;
     if (s.jog_active && now - this.demoJogLast > s.jog_lease_ms) {
       this.demoInvalidate();
-      s.stopped = true;
+      s.connection_paused = true;
     }
     while (remaining > 0) {
       const dt = Math.min(0.01, remaining);
@@ -302,14 +302,15 @@ export class Transport {
   mock(path, body) {
     this.demoAdvance();
     const s = this.demoState;
-    if (s.armed && !s.stopped && Date.now() - this.demoLast > 5000) {
+    if (s.armed && !s.stopped && !s.connection_paused && Date.now() - this.demoLast > 5000) {
       this.demoInvalidate();
-      s.stopped = true;
+      s.connection_paused = true;
     }
     if (path === "/arm") {
       this.demoInvalidate();
       s.armed = true;
       s.stopped = false;
+      s.connection_paused = false;
       this.demoLast = Date.now();
     }
     if (path === "/stop") {
@@ -339,6 +340,7 @@ export class Transport {
       )
         throw new DeviceError("Outside calibrated limits", 409);
       this.demoInvalidate();
+      s.connection_paused = false;
       s.pan = s.pan_target = p.pan;
       s.tilt = s.tilt_target = p.tilt;
       this.demoLast = Date.now();
@@ -358,6 +360,7 @@ export class Transport {
         Math.abs(body.tilt) > 1
       )
         throw new DeviceError("Stale or invalid jog", 409);
+      s.connection_paused = false;
       s.jog_seq = body.seq;
       s.jog_pan = body.pan;
       s.jog_tilt = body.tilt;

@@ -55,7 +55,7 @@ Firmware eases absolute Precision and Home moves with a synchronized jerk-limite
 
 Values are degrees from calibrated center, not increments. Firmware positions and the dashboard visualization are commanded estimates, not measured angles. Limits apply to both values atomically.
 
-Connection loss cancels client motion intent; reconnection never automatically arms or resumes it. The firmware also latches STOP after Wi-Fi loss or five seconds without an accepted movement/ARM command. Status polling does not renew this timeout. Any optional live-control lease only renews an explicitly active session; stop it when finished. A browser STOP requires a working network connection: use the GPIO STOP input for local intervention that does not depend on a browser request. It is software-polled and is not a hardwired power cutoff.
+Connection loss cancels client motion intent; reconnection never automatically arms or resumes it. Firmware holds position after Wi-Fi loss or five seconds without an accepted movement/ARM command, preserving the existing armed state. Status polling does not renew this timeout. Any optional live-control lease only renews an explicitly active session; stop it when finished. A browser STOP requires a working network connection: use the GPIO STOP input for local intervention that does not depend on a browser request. It is software-polled and is not a hardwired power cutoff.
 
 
 The directional remote uses `POST /jog` with paired normalized rates, a control epoch returned by ARM, and a strictly increasing sequence. It renews intent approximately every 100 ms only while held. Releasing sends both rates zero with a newer sequence and starts jerk-limited braking. This may travel farther than an emergency STOP. Pointer cancellation, lost capture, window blur, page hiding, navigation, disconnect, and STOP clear held input. Keyboard arrows support diagonals when enabled and ignore editable fields.
@@ -64,7 +64,7 @@ The directional remote uses `POST /jog` with paired normalized rates, a control 
 {"pan":0.25,"tilt":0,"epoch":123456,"seq":1}
 ```
 
-A nonzero jog has a separate **500 ms lease**. Missing renewal immediately latches STOP and invalidates the epoch; `/status` and `/heartbeat` cannot extend that lease. A zero/zero release ends the short lease. Resume requires deliberate ARM and a new hold. Old or duplicate sequences and previous epochs cannot revive motion. Older firmware without jog capability disables held directions; absolute Home and Precision remain available. See the [jog design and protocol](jog-design.md) for details and tradeoffs.
+A nonzero jog has a separate **500 ms lease**. Missing renewal immediately holds position and invalidates the epoch; `/status` and `/heartbeat` cannot extend that lease. A zero/zero release ends the short lease. Recovery requires a new hold; ARM is required only after explicit STOP or PWM disable. Old or duplicate sequences and previous epochs cannot revive motion. Older firmware without jog capability disables held directions; absolute Home and Precision remain available. See the [jog design and protocol](jog-design.md) for details and tradeoffs.
 
 ## Calibrate with measured angles
 

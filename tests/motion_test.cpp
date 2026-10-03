@@ -1,11 +1,25 @@
 #include "motion_planner.h"
 #include "jog_lease.h"
+#include "connection_pause.h"
 #include <fstream>
 #include <iostream>
 #include <random>
 #include <cassert>
 #include <limits>
 int main(int argc,char **argv){
+ // Connection recovery holds position, fences old commands and remains idempotent.
+ { Axis held[2];held[1].config.minimum=-25;held[1].config.maximum=25;held[1].config.speed=15;MotionPlanner motion;JogLease lease;bool paused=false;
+   lease.seed(100);lease.accept(.25,0,1,0);assert(motion.jog(held,.25,0));motion.tick(held,.02);
+   double position=held[0].current;pauseConnection(motion,held,lease,paused);
+   assert(paused&&!lease.active&&!motion.moving()&&held[0].current==position&&held[0].target==position);
+   assert(!lease.accepts(.25,0,100,2,true,false,false));
+   auto epoch=lease.epoch;pauseConnection(motion,held,lease,paused);assert(lease.epoch==epoch);
+   assert(lease.accepts(.25,0,epoch,1,true,false,false));
+   assert(!lease.accepts(.25,0,epoch,1,true,true,false));
+   assert(!lease.accepts(.25,0,epoch,1,false,false,false));
+   assert(!lease.accepts(.25,0,epoch,1,true,false,true));
+ }
+
  AxisConfig c;assert(c.valid());assert(pulseFor(0,c)==1500);
  assert(pulseFor(-60,c)==1400);assert(pulseFor(60,c)==1600);
  c.low=1000;c.high=2000;assert(pulseFor(-60,c)==1000);assert(pulseFor(60,c)==2000);

@@ -230,3 +230,5 @@ Built with **build123d · PlatformIO · SolidJS 2 · Three.js** by **worxbend**.
 🔩 **Opposite bearing-side axle:** the current source bundle also includes a [threaded M5 × 16 fit-check model](exports/fasteners/idler_axle_M5x16_FIT_ONLY.stl), with STEP, 3MF and vector drawings beside it. Use a metal screw for the loaded assembly. These regenerated files retain the current cradle width; the requested narrowing awaits fit clarification.
 
 📶 **Automatic recovery:** transient control-request failures no longer require manually reconnecting. The client retries status indefinitely and restores controls when the ESP32 responds, while cancelling interrupted holds and retaining explicit ARM after a device STOP.
+
+📶 **Firmware 0.5.2 connection holds:** transport timeouts cancel motion and retain holding torque without requiring re-ARM. Reconnect, then press a direction again. Explicit STOP, physical STOP and PWM disable still require deliberate ARM. Update both firmware and the client filesystem.

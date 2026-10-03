@@ -39,7 +39,7 @@ A symmetrical U-yoke ESP32 camera pan/tilt mechanism based on the owner's revise
 
 ### ✅ Build evidence
 
-- ESP32 firmware compiled; motion and bounded HTTP/JSON parser checks passed. Jerk-limited S-curves synchronize pan/tilt, preserve velocity and acceleration during retargeting, and check full-path position extrema before accepting motion. Normal jog release brakes smoothly; safety STOP immediately holds. Epoch/sequence fencing rejects stale packets. Endless station Wi-Fi retry, combined offsets, authenticated disarmed calibration, explicit heartbeat lease, connection-loss hold and isolated HTTP task.
+- ESP32 firmware compiled; motion and bounded HTTP/JSON parser checks passed. Jerk-limited S-curves synchronize pan/tilt, preserve velocity and acceleration during retargeting, and check full-path position extrema before accepting motion. Normal jog release brakes smoothly; safety STOP immediately holds. Transport timeouts preserve armed state; explicit STOP remains latched. Epoch/sequence fencing rejects stale packets. Endless station Wi-Fi retry, combined offsets, authenticated disarmed calibration, explicit heartbeat lease, recoverable connection-loss hold and isolated HTTP task.
 - SolidJS 2 rc.13 client built; transport/storage/browser and local bridge tests passed. Press-and-hold remote, 100 ms rate refresh, 500 ms jog timeout, pointer/keyboard cancellation, presets, calibration wizard, mobile controls, import/export, privacy and no-auto-ARM reconnect verified with simulated devices.
 - {validation['checks']} CAD, STL/3MF and sampled-clearance checks passed.
 - Desktop/mobile WebGL interactions, part visibility, view presets, downloads and guide checked with Playwright.

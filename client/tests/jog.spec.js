@@ -92,7 +92,7 @@ test('failed jog recovers automatically through repeated status failures without
   return route.fallback();
  });
  await page.route('**/jog',async route=>{
-  if(!failedJog){failedJog=true;return route.abort('failed');}
+  if(!failedJog){failedJog=true;calls.state.control_epoch++;calls.state.jog_seq=0;calls.state.jog_active=false;calls.state.connection_paused=true;return route.abort('failed');}
   return route.fallback();
  });
  await press(page,'Hold pan right');

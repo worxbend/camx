@@ -57,7 +57,7 @@ Status includes `control_epoch`, `jog_seq`, `jog_pan`, `jog_tilt`, `jog_active`,
 
 ## Leases and invalidation
 
-The firmware accepts renewed jog intent only for the current epoch. A nonzero accepted rate renews the lease; an accepted zero/zero release disables the short lease and begins jerk-limited braking. If an active jog reaches 500 ms without renewal, it immediately latches STOP and invalidates that epoch. Status requests and `/heartbeat` do not renew a jog lease. Invalid JSON/rates return HTTP 400; state, epoch, sequence, or planner rejection returns HTTP 409; accepted requests return HTTP 200 with status. ARM is explicit; reconnecting cannot revive an old hold.
+The firmware accepts renewed jog intent only for the current epoch. A nonzero accepted rate renews the lease; an accepted zero/zero release disables the short lease and begins jerk-limited braking. If an active jog reaches 500 ms without renewal, it immediately holds position and invalidates that epoch. Status requests and `/heartbeat` do not renew a jog lease. Invalid JSON/rates return HTTP 400; state, epoch, sequence, or planner rejection returns HTTP 409; accepted requests return HTTP 200 with status. ARM is explicit; reconnecting cannot revive an old hold.
 
 STOP, DISARM, Wi-Fi loss, motion watchdog expiry, and accepted absolute `/move` or `/home` commands invalidate prior jog intent. Switching from the remote to an absolute pose is deliberate, and stale jog requests cannot override that pose. If sequence space is exhausted, stop and ARM for a new epoch instead of wrapping into previously used sequence values.
 

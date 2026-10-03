@@ -7,6 +7,7 @@
 #include "http_request.h"
 #include "motion_planner.h"
 #include "jog_lease.h"
+#include "connection_pause.h"
 #include <freertos/semphr.h>
 #include <Preferences.h>
 #include <esp_arduino_version.h>
@@ -31,6 +32,7 @@ uint32_t lastReconnect=0;
 Preferences prefs;
 Axis axes[2];
 bool armed=false, stopped=true;
+bool connectionPaused=false;
 uint32_t lastTick=0, lastCommand=0;
 String serialLine;
 bool serialOverflow=false;
@@ -46,6 +48,7 @@ void duty(int axis,double pulse) {
 }
 MotionPlanner planner;
 JogLease jogLease;
+void connectionHold(){Guard guard;pauseConnection(planner,axes,jogLease,connectionPaused);}
 void halt() {Guard guard;if(!stopped||jogLease.active)jogLease.invalidate();planner.stop(axes); stopped=true;}
 void disarm() {Guard guard;jogLease.invalidate();planner.stop(axes);stopped=true;armed=false;duty(0,0);duty(1,0);}
 bool arm() {
@@ -53,36 +56,38 @@ bool arm() {
   if(digitalRead(STOP_PIN)==LOW)return false;
   // PWM assumes center on first enable; SG90 has no position feedback.
   if(!armed){for(auto &a:axes){a.current=0;a.target=0;}planner.stop(axes);}
-  planner.stop(axes);jogLease.invalidate();armed=true;stopped=false;lastCommand=millis();return true;
+  planner.stop(axes);jogLease.invalidate();armed=true;stopped=false;connectionPaused=false;lastCommand=millis();return true;
 }
 bool move(float pan,float tilt) {
   Guard guard;
   if(digitalRead(STOP_PIN)==LOW){halt();return false;}
-  if(jogLease.expired(millis())){halt();return false;}
+  if(jogLease.expired(millis())){connectionHold();return false;}
   if(!armed || stopped || !std::isfinite(pan) || !std::isfinite(tilt))return false;
   if(!planner.plan(axes,pan,tilt))return false;
-  if(digitalRead(STOP_PIN)==LOW || jogLease.expired(millis())){halt();return false;}
-  jogLease.invalidate();lastCommand=millis();return true;
+  if(digitalRead(STOP_PIN)==LOW){halt();return false;}
+  if(jogLease.expired(millis())){connectionHold();return false;}
+  jogLease.invalidate();connectionPaused=false;lastCommand=millis();return true;
 }
 bool jog(double pan,double tilt,uint32_t epoch,uint32_t seq){
   Guard guard;
   if(digitalRead(STOP_PIN)==LOW){halt();return false;}
-  if(jogLease.expired(millis())){halt();return false;}
+  if(jogLease.expired(millis())){connectionHold();return false;}
   if(!jogLease.accepts(pan,tilt,epoch,seq,armed,stopped,false))return false;
   if(!planner.jog(axes,pan,tilt))return false;
-  if(digitalRead(STOP_PIN)==LOW || jogLease.expired(millis())){halt();return false;}
-  jogLease.accept(pan,tilt,seq,millis());lastCommand=millis();return true;
+  if(digitalRead(STOP_PIN)==LOW){halt();return false;}
+  if(jogLease.expired(millis())){connectionHold();return false;}
+  jogLease.accept(pan,tilt,seq,millis());connectionPaused=false;lastCommand=millis();return true;
 }
 String status() {
   Guard guard;
   char out[1280];
-  snprintf(out,sizeof(out),"{\"armed\":%s,\"stopped\":%s,\"estop\":%s,\"pan\":%.2f,\"tilt\":%.2f,\"pan_target\":%.2f,\"tilt_target\":%.2f,\"pan_min\":%.1f,\"pan_max\":%.1f,\"tilt_min\":%.1f,\"tilt_max\":%.1f,\"pan_center\":%d,\"tilt_center\":%d,\"pan_low\":%d,\"pan_high\":%d,\"tilt_low\":%d,\"tilt_high\":%d,\"pan_speed\":%.1f,\"tilt_speed\":%.1f,\"pan_invert\":%s,\"tilt_invert\":%s,\"firmware\":\"0.5.1\",\"control_epoch\":%u,\"jog_seq\":%u,\"jog_pan\":%.3f,\"jog_tilt\":%.3f,\"jog_active\":%s,\"jog_lease_ms\":500}",
+  snprintf(out,sizeof(out),"{\"armed\":%s,\"stopped\":%s,\"estop\":%s,\"pan\":%.2f,\"tilt\":%.2f,\"pan_target\":%.2f,\"tilt_target\":%.2f,\"pan_min\":%.1f,\"pan_max\":%.1f,\"tilt_min\":%.1f,\"tilt_max\":%.1f,\"pan_center\":%d,\"tilt_center\":%d,\"pan_low\":%d,\"pan_high\":%d,\"tilt_low\":%d,\"tilt_high\":%d,\"pan_speed\":%.1f,\"tilt_speed\":%.1f,\"pan_invert\":%s,\"tilt_invert\":%s,\"firmware\":\"0.5.2\",\"control_epoch\":%u,\"jog_seq\":%u,\"jog_pan\":%.3f,\"jog_tilt\":%.3f,\"jog_active\":%s,\"jog_lease_ms\":500,\"connection_paused\":%s}",
     armed?"true":"false",stopped?"true":"false",digitalRead(STOP_PIN)==LOW?"true":"false",
     axes[0].current,axes[1].current,axes[0].target,axes[1].target,
     axes[0].config.minimum,axes[0].config.maximum,axes[1].config.minimum,axes[1].config.maximum,
     axes[0].config.center,axes[1].config.center,
     axes[0].config.low,axes[0].config.high,axes[1].config.low,axes[1].config.high,
-    axes[0].config.speed,axes[1].config.speed,axes[0].config.invert?"true":"false",axes[1].config.invert?"true":"false",unsigned(jogLease.epoch),unsigned(jogLease.sequence),jogLease.pan,jogLease.tilt,jogLease.active?"true":"false");
+    axes[0].config.speed,axes[1].config.speed,axes[0].config.invert?"true":"false",axes[1].config.invert?"true":"false",unsigned(jogLease.epoch),unsigned(jogLease.sequence),jogLease.pan,jogLease.tilt,jogLease.active?"true":"false",connectionPaused?"true":"false");
   return out;
 }
 bool number(const String &s,float &value) {
@@ -192,7 +197,7 @@ void route(WiFiClient &client,const HttpRequest &r) {
     else if(!strcmp(r.path,"/disarm")){disarm();ok=true;}
     else if(!strcmp(r.path,"/home"))ok=move(0,0);
     else if(!strcmp(r.path,"/heartbeat")){
-      Guard guard;if(jogLease.expired(millis()))halt();ok=controlLeaseAllowed(armed,stopped,digitalRead(STOP_PIN)==LOW);
+      Guard guard;if(jogLease.expired(millis()))connectionHold();ok=controlLeaseAllowed(armed,stopped,digitalRead(STOP_PIN)==LOW);
       if(ok)lastCommand=millis();
     }
     else{response(client,404,"{\"error\":\"not_found\"}");return;}
@@ -266,7 +271,7 @@ void loop(){
  // Check before network/serial handling; a pressed switch latches STOP, keeping torque.
  if(digitalRead(STOP_PIN)==LOW)halt();
  const bool connected=WiFi.status()==WL_CONNECTED;
- if(networkLost.exchange(false) || (networkWasConnected && !connected))halt();
+ if(networkLost.exchange(false) || (networkWasConnected && !connected))connectionHold();
  networkWasConnected=connected;
  uint32_t networkNow=millis();
  if(!connected && WIFI_SSID[0] && uint32_t(networkNow-lastReconnect)>=10000){lastReconnect=networkNow;WiFi.reconnect();}
@@ -277,7 +282,7 @@ void loop(){
   else {serialOverflow=true;serialLine="";}
  }
  {Guard guard;
- uint32_t now=millis();if(jogLease.expired(now))halt();if(armed && !stopped && uint32_t(now-lastCommand)>COMMAND_TIMEOUT_MS)halt();
+ uint32_t now=millis();if(jogLease.expired(now))connectionHold();if(armed && !stopped && !connectionPaused && uint32_t(now-lastCommand)>COMMAND_TIMEOUT_MS)connectionHold();
  if(uint32_t(now-lastTick)>=20){float dt=uint32_t(now-lastTick)/1000.0f;lastTick=now;
    if(digitalRead(STOP_PIN)==LOW)halt();
    if(armed){planner.tick(axes,dt);for(int i=0;i<2;i++)duty(i,pulseFor(axes[i].current,axes[i].config));}
