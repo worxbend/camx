@@ -1,0 +1,23 @@
+{
+  "previous_width_mm": 67.2,
+  "new_width_mm": 57.2,
+  "reduction_per_side_mm": 5,
+  "camera_width_mm": 50,
+  "camera_opening_mm": 51,
+  "parts": {
+    "tripod_nut_retainer": "reuse",
+    "base": "reuse",
+    "lid": "reuse",
+    "bearing_retainer": "reuse",
+    "spindle_keeper": "reuse",
+    "drive_arm": "reuse",
+    "pan_arm": "reprint",
+    "tilt_cover": "reuse",
+    "idler_arm": "reuse",
+    "idler_cover": "reuse",
+    "idler_bearing_retainer": "reuse",
+    "camera_cradle": "reprint",
+    "fit_coupon": "reuse"
+  },
+  "physical_fit_verified": false
+}

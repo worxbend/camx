@@ -54,7 +54,11 @@ Rear pivot-shell exit, integral arm tie eyes, a through-notch in the rotating pl
 
 ### 📐 Compact mechanical redesign
 
-100 × 82 × 38 mm base (53% smaller footprint, 55% less bounding-box volume), Ø92 mm pan platform and shallow lower arm shells. Default camera fit is the 55 × 51 × 41 mm PowerConf C200 envelope; exact model and folded-clip fit remain unconfirmed. The existing ESP32, both SG90 servos, USB-C module and capacitor are retained. Verify stability, cable clearance, RF performance and actual component fit on the bench.
+100 × 82 × 38 mm base (53% smaller footprint, 55% less bounding-box volume), Ø92 mm pan platform and shallow lower arm shells. Default camera fit is the owner-stated 50 mm width, modeled as 50 × 51 × 41 mm with a 51 mm cradle opening. The former 55 mm envelope does not fit this narrower revision; exact model and folded-clip fit remain unconfirmed. The existing ESP32, both SG90 servos, USB-C module and capacitor are retained. Verify stability, cable clearance, RF performance and actual component fit on the bench.
+
+### 📏 Narrowed cradle after first print
+
+Cradle width is 57.2 mm, reduced by exactly 5 mm per side. Matching arm positions move inward on the pan platform. Only camera_cradle and pan_arm require reprinting; the remaining part print geometry is unchanged. Use a metal M5 × 12 axle, a 2.5 mm outer washer stack, the 1.4 mm spacer and a 2.7 mm M5 jam nut. Physical fit is still to be checked.
 
 ### 🔩 Short cover screws
 

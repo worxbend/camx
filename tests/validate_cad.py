@@ -52,6 +52,11 @@ checks.append('both arms contain four near-cover standoffs for short screws')
 # All printed pieces must have zero-volume mutual overlap at neutral assembly.
 for a,b in itertools.combinations([n for n in parts if n!='fit_coupon'],2):clear(parts[a],parts[b],f'neutral parts {a}/{b}')
 for a,b in [('base','pan_servo'),('base','esp32_envelope'),('base','usb_pcb_envelope'),('base','usb_flange_envelope'),('base','capacitor_envelope'),('lid','pan_servo'),('pan_arm','bearing_6805'),('drive_arm','tilt_servo'),('camera_cradle','camera_envelope'),('camera_cradle','tilt_servo'),('tilt_cover','tilt_servo'),('idler_arm','idler_bearing_625'),('idler_arm','idler_spacer'),('camera_cradle','idler_axle_M5'),('idler_cover','idler_bearing_625'),('idler_cover','idler_axle_M5')]:clear(parts[a],hw[b],f'neutral hardware {a}/{b}')
+for n in ['idler_axle_M5','idler_jam_nut_M5']:
+ clear(hw[n],hw['camera_envelope'],f'narrow cradle camera/{n}')
+clear(parts['camera_cradle'],hw['idler_jam_nut_M5'],'jam nut fits captive pocket')
+assert abs(parts['camera_cradle'].bounding_box().size.X-57.2)<.01
+checks.append('cradle narrowed exactly 5 mm per side to 57.2 mm')
 flange_bounds=hw['usb_flange_envelope'].bounding_box()
 assert abs(flange_bounds.max.X-(p['base_width']/2-p['usb_flange_recess']+p['usb_flange_thickness']))<1e-6
 assert flange_bounds.max.X<=p['base_width']/2

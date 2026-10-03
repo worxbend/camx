@@ -24,7 +24,7 @@
 
 Take an Anker PowerConf webcam. Give it a smooth pan axis, a balanced tilt cradle, and a rounded enclosure that actually looks like a device you'd keep on your desk.
 
-The compact version uses a **100 × 82 × 38 mm base**, a **Ø92 mm pan platform** and shallow lower side shells. The complete neutral assembly is **136.6 × 92 × 127 mm**, including the two pivot housings. Camera fit targets the approximately **55 × 51 × 41 mm C200 envelope**; verify your exact PowerConf model and folded clip.
+The compact version uses a **100 × 82 × 38 mm base**, a **Ø92 mm pan platform** and shallow lower side shells. The complete neutral assembly is **126.6 × 91.5 × 127 mm**, including the two pivot housings. Camera fit targets the owner-stated **50 mm-wide camera**, represented by a **50 × 51 × 41 mm envelope**; verify your exact PowerConf model and folded clip.
 
 CAMX follows the owner's hand-drawn concept: **a curved camera cradle and an ESP32 beside the pan servo in the base**, rebuilt to match your revised sketch with **matching rounded arm housings, mirrored pivot caps, a circular pan platform and a U-shaped support**. The passive housing has the same outer shape as the servo side, with bearing hardware inside. Integral standoffs let both outer covers attach with short M2 × 8 mm screws. The camera bolts on through its existing **1/4″-20 tripod thread**. The tilt-servo lead has a rear shell exit, arm tie eyes, a pan-platform notch and a separate rear base entry. An orange neutral-pose guide shows its route in the viewer; leave an external service loop for pan. The USB-C panel board and **1000 µF capacitor** get dedicated space inside. The visible USB-C metal flange fits a recessed pocket in the right wall, 0.2 mm below its outer surface, with reinforced backing and internal nuts.
 
@@ -227,7 +227,7 @@ Built with **build123d · PlatformIO · SolidJS 2 · Three.js** by **worxbend**.
 
 </div>
 
-🔩 **Opposite bearing-side axle:** the current source bundle also includes a [threaded M5 × 16 fit-check model](exports/fasteners/idler_axle_M5x16_FIT_ONLY.stl), with STEP, 3MF and vector drawings beside it. Use a metal screw for the loaded assembly. These regenerated files retain the current cradle width; the requested narrowing awaits fit clarification.
+🔩 **Opposite bearing-side axle:** the current source bundle also includes a [threaded M5 × 12 fit-check model](exports/fasteners/idler_axle_M5x12_FIT_ONLY.stl), with STEP, 3MF and vector drawings beside it. Use a metal screw for the loaded assembly. The cradle is now 57.2 mm wide, reduced by 5 mm per side, with a 51 mm clear camera opening. Use a 2.7 mm M5 jam nut and a 2.5 mm outer washer stack.
 
 📶 **Automatic recovery:** transient control-request failures no longer require manually reconnecting. The client retries status indefinitely and restores controls when the ESP32 responds, while cancelling interrupted holds and retaining explicit ARM after a device STOP.
 

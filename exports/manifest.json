@@ -7,7 +7,7 @@
     "wall": 3.0,
     "lid_thickness": 4.0,
     "fit_clearance": 0.3,
-    "camera_width": 55.0,
+    "camera_width": 50,
     "camera_depth": 51,
     "camera_height": 41,
     "camera_mass_g": 150.0,
@@ -15,7 +15,7 @@
     "camera_cg_y": 0.0,
     "camera_bottom_z": 80,
     "tilt_axis_z": 101,
-    "arm_inner_x": 34,
+    "arm_inner_x": 29,
     "servo_length": 23.0,
     "servo_width": 12.2,
     "servo_height": 23.0,
@@ -49,7 +49,7 @@
     "tilt_limit_deg": 25.0,
     "arm_thickness": 6.0,
     "edge_radius": 1.2,
-    "idler_arm_inner_x": -34,
+    "idler_arm_inner_x": -29,
     "idler_bearing_id": 5.0,
     "idler_bearing_od": 16.0,
     "idler_bearing_width": 5.0,
@@ -62,7 +62,12 @@
     "pan_platform_diameter": 92,
     "arm_stem_depth": 7,
     "usb_body_opening_width": 16.6,
-    "usb_body_opening_height": 6.0
+    "usb_body_opening_height": 6.0,
+    "cradle_side_clearance": 0.5,
+    "cradle_shelf_margin": 1.5,
+    "idler_axle_length": 12,
+    "idler_outer_washer_stack": 2.5,
+    "idler_nut_thickness": 2.7
   },
   "datums": {
     "bearing_bottom_z": 42.5,
@@ -79,11 +84,11 @@
       13.299999999999997
     ],
     "tilt_servo_origin": [
-      63.0,
+      58.0,
       0,
       106.0
     ],
-    "horn_plane_x": 34.0,
+    "horn_plane_x": 29.0,
     "profile_edge_fillet_mm": 0.8,
     "pivot_cap_fillet_mm": 0.4
   },
@@ -149,7 +154,7 @@
       "valid": true
     },
     "pan_arm": {
-      "volume_mm3": 51134.157,
+      "volume_mm3": 51134.155,
       "print_bounds_mm": [
         92.0,
         91.464,
@@ -199,11 +204,11 @@
       "valid": true
     },
     "camera_cradle": {
-      "volume_mm3": 30112.031,
+      "volume_mm3": 24332.002,
       "print_bounds_mm": [
         42.5,
         55.0,
-        67.2
+        57.2
       ],
       "solids": 1,
       "valid": true
@@ -232,6 +237,7 @@
     "idler_spacer",
     "idler_outer_washers",
     "idler_axle_M5",
+    "idler_jam_nut_M5",
     "camera_envelope",
     "tilt_cable_route",
     "camera_lens"

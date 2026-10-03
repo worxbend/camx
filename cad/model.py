@@ -240,10 +240,10 @@ def build(p):
  parts['idler_bearing_retainer']=ir
  # Cradle shelf and swept quarter-round rib along one side: matches the curved sketch.
  shelfz=p['camera_bottom_z']-10;cw=p['camera_width'];depth=p['camera_depth']+4
- cradle=rounded(cw+8,depth,5,3,z=shelfz)
- cradle+=rounded(cw-8,depth-6,5,2,z=shelfz+5)
+ cradle=rounded(cw+2*p['cradle_shelf_margin'],depth,5,3,z=shelfz)
+ cradle+=rounded(cw-13,depth-6,5,2,z=shelfz+5)
  # Small rounded elbow below the camera; straight web clears the camera body.
- inner_x=cw/2+3;radius=8;elbow_z=shelfz+13
+ inner_x=cw/2+p['cradle_side_clearance'];radius=8;elbow_z=shelfz+13
  if axis < elbow_z+4:raise ValueError('tilt axis too low for the curved cradle')
  outer=Pos(inner_x-radius,-7,elbow_z)*Rot(-90,0,0)*Cylinder(radius+5,14,align=MIN)
  inner=Pos(inner_x-radius,-8,elbow_z)*Rot(-90,0,0)*Cylinder(radius,16,align=MIN)
@@ -255,7 +255,7 @@ def build(p):
  hubx=horn_plane-4
  cradle+=rounded(hubx+5-inner_x,14,6,1,(inner_x+hubx+5)/2,0,axis-3)
  cradle+=xhole(12,5,hubx,0,axis)
- right_cheek_blank=cradle & box(18,24,65,31,0,shelfz-1)
+ right_cheek_blank=cradle & box(18,24,65,inner_x+.5,0,shelfz-1)
  for dz in [-p["horn_screw_pitch"]/2,p["horn_screw_pitch"]/2]:
   right_cheek_blank+=rounded(4,10,7,.8,hubx+1,0,axis+dz-3.5)
  cradle-=xhole(5,16,hubx-8,0,axis)
@@ -269,7 +269,7 @@ def build(p):
  cradle+=right_cheek.mirror(Plane.YZ)
  left_outer=-ax+.4
  cradle-=xhole(5.3,12,left_outer-1,0,axis)
- hexnut=Pos(-ax+4.4,0,axis)*Rot(0,90,0)*extrude(__import__('build123d').RegularPolygon(8.3/math.sqrt(3),6),amount=5.5)
+ hexnut=Pos(left_outer-.1,0,axis)*Rot(0,90,0)*extrude(__import__('build123d').RegularPolygon(8.3/math.sqrt(3),6),amount=p['idler_nut_thickness']+.1)
  cradle-=hexnut
  # Camera bolt slot gives +/-8 mm fore-aft balance adjustment; underside head recess.
  ty=p['camera_thread_y']
@@ -280,6 +280,8 @@ def build(p):
  for x in [-15,15]:cradle-=box(3,3,8,x,depth/2-5,shelfz-1)
  cradle-=box(20,40,100,-ax-10+.4,0,shelfz-1)
  cradle-=box(20,40,100,ax+10-.4,0,shelfz-1) # maintain gap to the thicker upright
+ # Clear the lower elbow from the measured camera envelope without thinning the outer web.
+ cradle-=box(cw+2*p['cradle_side_clearance'],p['camera_depth']+1,p['camera_height']+5,z=p['camera_bottom_z'])
  parts['camera_cradle']=cradle
  # Small fit coupon: first print this to check bearing, servo cavity, horn, USB and cap.
  coupon=box(105,68,3)
@@ -307,8 +309,11 @@ def build(p):
  camera=camera.fillet(4,camera.edges())
  hardware['idler_bearing_625']=xhole(p['idler_bearing_od'],p['idler_bearing_width'],bearing_x,0,axis)-xhole(p['idler_bearing_id'],p['idler_bearing_width']+2,bearing_x-1,0,axis)
  hardware['idler_spacer']=xhole(7.5,p['idler_spacer_length'],bearing_x+p['idler_bearing_width'],0,axis)-xhole(5.2,p['idler_spacer_length']+2,bearing_x+p['idler_bearing_width']-1,0,axis)
- hardware['idler_outer_washers']=xhole(7.5,2,bearing_x-2,0,axis)-xhole(5.2,4,bearing_x-3,0,axis)
- hardware['idler_axle_M5']=xhole(5,16,bearing_x-2,0,axis)+xhole(8.5,3.5,bearing_x-5.5,0,axis)
+ washer=p['idler_outer_washer_stack']
+ hardware['idler_outer_washers']=xhole(7.5,washer,bearing_x-washer,0,axis)-xhole(5.2,washer+2,bearing_x-washer-1,0,axis)
+ hardware['idler_axle_M5']=xhole(5,p['idler_axle_length'],bearing_x-washer,0,axis)+xhole(8.5,3.5,bearing_x-washer-3.5,0,axis)
+ nut=Pos(left_outer,0,axis)*Rot(0,90,0)*__import__('build123d').extrude(__import__('build123d').RegularPolygon(8/math.sqrt(3),6),amount=p['idler_nut_thickness'])
+ hardware['idler_jam_nut_M5']=nut-xhole(5.2,p['idler_nut_thickness']+2,left_outer-1,0,axis)
  hardware['camera_envelope']=Pos(0,0,p['camera_bottom_z'])*camera
  # Illustrative neutral cable route, not a harness or motion-sweep simulation.
  from build123d import Sphere,Vector
@@ -393,7 +398,7 @@ def main():
  from render import render_all
  render_all(parts,hardware,p,out)
  from fasteners import export_axle
- export_axle(out)
+ export_axle(out,p)
  print('DONE',out)
 
 def axis_center(p):return p['tilt_axis_z']/2

@@ -19,14 +19,14 @@
       38
     ],
     "neutral_assembly_mm": [
-      136.6,
-      92.0,
+      126.6,
+      91.5,
       127.0
     ],
-    "printed_solid_volume_mm3": 262805.75
+    "printed_solid_volume_mm3": 257025.72
   },
   "base_footprint_reduction_percent": 52.5,
-  "printed_solid_volume_reduction_percent": 33.1,
+  "printed_solid_volume_reduction_percent": 34.5,
   "limitations": [
     "neutral bounding box excludes cable loops and motion sweep",
     "solid volume is geometric material volume, not slicer filament consumption",
