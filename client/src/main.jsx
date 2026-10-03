@@ -28,6 +28,7 @@ function App() {
   const [tab, setTab] = createSignal("Remote"),
     [status, setStatus] = createSignal(initialStatus()),
     [connected, setConnected] = createSignal(false),
+    [retryConnection, setRetryConnection] = createSignal(false),
     [demo, setDemo] = createSignal(
       new URLSearchParams(location.search).get("demo") === "1" ||
         location.hostname.endsWith("github.io"),
@@ -62,6 +63,7 @@ function App() {
   const transport = new Transport({
     onEpochChange: () => jogController?.clear(false),
     onStatus: (s) => {
+      if (!connected() && retryConnection()) setError("");
       setStatus(s);
       setConnected(true);
       if (!s.armed || s.stopped || s.estop) {
@@ -157,6 +159,7 @@ function App() {
         return;
       }
     }
+    setRetryConnection(true);
     transport.configure({ base, token: token(), demo: demo() });
     const s = await run(() => transport.request("/status", undefined, "GET"));
     if (s) {
@@ -170,6 +173,7 @@ function App() {
   };
   const disconnect = async () => {
     if (busy()) return;
+    setRetryConnection(false);
     setBusy(true);
     await jogController.clear();
     transport.cancel();
@@ -234,7 +238,7 @@ function App() {
   };
   const timer = setInterval(async () => {
     if (
-      !connected() ||
+      (!connected() && !retryConnection()) ||
       pollBusy ||
       transport.moving ||
       transport.jogSending ||
@@ -244,6 +248,7 @@ function App() {
     pollBusy = true;
     try {
       if (
+        connected() &&
         lease() &&
         movable() &&
         document.visibilityState === "visible" &&

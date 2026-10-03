@@ -83,3 +83,29 @@ test('exhausted sequence release keeps explicit ARM guidance after status refres
  const reads=calls.filter(c=>c.path==='/status').length;await press(page,'Hold pan right');await expect.poll(()=>calls.state.jog_seq).toBe(0xffffffff);await page.waitForTimeout(30);await page.mouse.up();await expect(page.getByRole('alert')).toContainText(/sequence exhausted.*ARM/i);await expect.poll(()=>calls.filter(c=>c.path==='/status').length).toBeGreaterThan(reads);
  const commands=jogs(calls).length;await page.waitForTimeout(1400);expect(jogs(calls)).toHaveLength(commands);expect(calls.filter(c=>c.path==='/arm')).toHaveLength(1);expect(faults).toEqual([]);await expect(page.getByRole('alert')).toContainText(/sequence exhausted.*ARM/i);
 });
+
+test('failed jog recovers automatically through repeated status failures without replaying motion',async({page})=>{
+ const calls=await remoteDevice(page);await page.goto('./');await connectArm(page);
+ let failStatus=3,failedJog=false,statusAttempts=0;
+ await page.route('**/status',async route=>{
+  if(failedJog){statusAttempts++;if(failStatus-->0)return route.abort('failed');}
+  return route.fallback();
+ });
+ await page.route('**/jog',async route=>{
+  if(!failedJog){failedJog=true;return route.abort('failed');}
+  return route.fallback();
+ });
+ await press(page,'Hold pan right');
+ await expect.poll(()=>failedJog).toBe(true);
+ await expect(page.getByRole('button',{name:'Hold pan right',exact:true})).toBeDisabled();
+ await page.mouse.up();
+ await expect.poll(()=>statusAttempts,{timeout:12000}).toBeGreaterThanOrEqual(4);
+ await expect(page.getByRole('button',{name:'Hold pan right',exact:true})).toBeEnabled();
+ expect(calls.filter(c=>c.path==='/arm')).toHaveLength(1);
+ expect(jogs(calls)).toHaveLength(0);
+ await page.screenshot({path:'/tmp/camx-recovered-client.png'});
+ await press(page,'Hold pan right');await expect.poll(()=>jogs(calls).some(c=>c.body.pan>0)).toBe(true);await page.mouse.up();
+ await page.getByRole('button',{name:'Connection',exact:true}).first().click();
+ await page.getByRole('button',{name:'Disconnect',exact:true}).click();
+ const count=statusAttempts;await page.waitForTimeout(1400);expect(statusAttempts).toBe(count);
+});

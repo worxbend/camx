@@ -159,7 +159,7 @@ export class Transport {
         });
         if (!e.status)
           this.onError(
-            "Connection unavailable. Motion requests were cancelled; reconnect never arms automatically.",
+            "Connection interrupted. Retrying automatically; held motion was cancelled. Recovery never arms automatically.",
           );
       }
       throw e;

@@ -66,4 +66,6 @@ npm run build
 npx playwright install chromium
 npm test
 </code></pre>
-<p>Browser tests use simulated HTTP responses and demo state. They verify combined requests, explicit arming, stop/disarm, calibration, presets, keyboard focus guards, and responsive layouts without operating motors. These checks complement firmware parser and movement tests; they do not establish real servo clearance, torque, Wi-Fi reliability, electrical safety, or emergency response under load.</p></main></html>
+<p>Browser tests use simulated HTTP responses and demo state. They verify combined requests, explicit arming, stop/disarm, calibration, presets, keyboard focus guards, and responsive layouts without operating motors. These checks complement firmware parser and movement tests; they do not establish real servo clearance, torque, Wi-Fi reliability, electrical safety, or emergency response under load.</p>
+<h2>Automatic connection recovery</h2>
+<p>After Connect, the client retries status requests every second indefinitely, including after a failed jog request or failed initial connection. A request can take up to 2.2 seconds, and polls do not overlap. Recovery restores the controls from the current device status and clears the connection error without requiring another Connect click. Explicit Disconnect stops retries. Interrupted holds and queued movement commands are cancelled and never replayed. If the firmware has latched STOP or disabled PWM, ARM remains an explicit action; a fresh pointer or key press is required to jog again.</p></main></html>
