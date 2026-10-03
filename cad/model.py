@@ -392,6 +392,8 @@ def main():
  # Separate renderer imports only after CAD export; no GUI required.
  from render import render_all
  render_all(parts,hardware,p,out)
+ from fasteners import export_axle
+ export_axle(out)
  print('DONE',out)
 
 def axis_center(p):return p['tilt_axis_z']/2

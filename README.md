@@ -226,3 +226,5 @@ Still to verify: your component measurements, printer tolerances, actual servo t
 Built with **build123d · PlatformIO · SolidJS 2 · Three.js** by **worxbend**.
 
 </div>
+
+🔩 **Opposite bearing-side axle:** the current source bundle also includes a [threaded M5 × 16 fit-check model](exports/fasteners/idler_axle_M5x16_FIT_ONLY.stl), with STEP, 3MF and vector drawings beside it. Use a metal screw for the loaded assembly. These regenerated files retain the current cradle width; the requested narrowing awaits fit clarification.

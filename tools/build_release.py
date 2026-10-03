@@ -11,7 +11,7 @@ def zip_files(name,files):
  with zipfile.ZipFile(dest/name,'w',zipfile.ZIP_DEFLATED) as z:
   for p in files:
    if p.is_file() and p.name!='credentials.h':z.write(p,p.relative_to(ROOT))
-zip_files('camx-print-parts.zip',list((ROOT/'exports/parts').glob('*.stl'))+list((ROOT/'exports/parts').glob('*.3mf'))+[ROOT/'exports/assembly/print_layout.3mf',ROOT/'docs/assembly.md',ROOT/'exports/drawings/wiring.svg',ROOT/'exports/drawings/dimensions.svg'])
+zip_files('camx-print-parts.zip',list((ROOT/'exports/parts').glob('*.stl'))+list((ROOT/'exports/parts').glob('*.3mf'))+list((ROOT/'exports/fasteners').glob('*'))+[ROOT/'exports/assembly/print_layout.3mf',ROOT/'docs/assembly.md',ROOT/'exports/drawings/wiring.svg',ROOT/'exports/drawings/dimensions.svg'])
 zip_files('camx-firmware.zip',list((ROOT/'exports/firmware').glob('*'))+list((ROOT/'firmware/src').glob('*'))+list((ROOT/'firmware/include').glob('*'))+list((ROOT/'firmware/lib').rglob('*'))+[ROOT/'firmware/platformio.ini',ROOT/'docs/firmware-api.md',ROOT/'docs/control-client.md',ROOT/'docs/jog-design.md',ROOT/'tests/motion_test.cpp',ROOT/'tools/test_motion.py',ROOT/'tests/http_test.cpp',ROOT/'docs/assembly.md',ROOT/'exports/drawings/wiring.svg'])
 with zipfile.ZipFile(dest/'camx-viewer.zip','w',zipfile.ZIP_DEFLATED) as z:
  for p in (ROOT/'viewer/dist').rglob('*'):

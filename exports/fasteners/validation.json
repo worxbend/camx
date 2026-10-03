@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "valid_single_solid": true,
+  "watertight": true,
+  "consistent_winding": true,
+  "bounds_mm": [
+    8.5,
+    8.5,
+    19.5000001
+  ],
+  "intended_use": "fit-check reference only",
+  "physical_load_tested": false
+}
