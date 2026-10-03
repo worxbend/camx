@@ -199,7 +199,7 @@ export default function RemotePanel(props) {
           {(s) => (
             <button
               class={jogFraction() === s.value ? "active" : ""}
-              aria-pressed={jogFraction() === s.value}
+              aria-pressed={jogFraction() === s.value ? "true" : "false"}
               onClick={() => setJogSpeed(s.value)}
             >
               <strong>{s.label}</strong>
@@ -208,6 +208,9 @@ export default function RemotePanel(props) {
           )}
         </For>
       </div>
+      <p class="hint" aria-label="Requested jog speed">
+        Requested speed: pan {(status().pan_speed * jogFraction()).toFixed(1)}°/s · tilt {(status().tilt_speed * jogFraction()).toFixed(1)}°/s
+      </p>
       <label class="check remote-keyboard">
         <input
           type="checkbox"

@@ -22,7 +22,7 @@ const jogs=calls=>calls.filter(c=>c.path==='/jog');
 test('sustained pointer hold repeats rates and release sends newer zero pair',async({page})=>{
  const calls=await remoteDevice(page);await page.goto('./');await connectArm(page);await press(page,'Hold pan right');await expect.poll(()=>jogs(calls).filter(c=>c.body.pan>0).length).toBeGreaterThanOrEqual(3);await page.mouse.up();
  await expect.poll(()=>jogs(calls).at(-1)?.body.pan).toBe(0);expect(jogs(calls).at(-1).body.tilt).toBe(0);
- const sent=jogs(calls);for(let i=1;i<sent.length;i++)expect(sent[i].body.seq).toBeGreaterThan(sent[i-1].body.seq);expect(sent[0].body.pan).toBe(.25);expect(calls.some(c=>c.path==='/move')).toBe(false);
+ const sent=jogs(calls);for(let i=1;i<sent.length;i++)expect(sent[i].body.seq).toBeGreaterThan(sent[i-1].body.seq);expect(sent[0].body.pan).toBe(.5);expect(calls.some(c=>c.path==='/move')).toBe(false);
  const count=sent.length;await page.waitForTimeout(350);expect(jogs(calls)).toHaveLength(count);
 });
 test('keyboard holds combine diagonals and focused inputs never jog',async({page})=>{
@@ -108,4 +108,13 @@ test('failed jog recovers automatically through repeated status failures without
  await page.getByRole('button',{name:'Connection',exact:true}).first().click();
  await page.getByRole('button',{name:'Disconnect',exact:true}).click();
  const count=statusAttempts;await page.waitForTimeout(1400);expect(statusAttempts).toBe(count);
+});
+
+test('remote defaults to Normal and Fast changes the requested rate',async({page})=>{
+ const calls=await remoteDevice(page);await page.goto('./');await connectArm(page);
+ await expect(page.getByRole('button',{name:'Normal 50%',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect(page.getByLabel('Requested jog speed')).toContainText('pan 12.5°/s');
+ await page.getByRole('button',{name:'Fast 100%',exact:true}).click();
+ await expect(page.getByLabel('Requested jog speed')).toContainText('pan 25.0°/s');
+ await press(page,'Hold pan right');await expect.poll(()=>jogs(calls).at(-1)?.body.pan).toBe(1);await page.mouse.up();
 });

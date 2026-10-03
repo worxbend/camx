@@ -107,3 +107,13 @@ Browser tests use simulated HTTP responses and demo state. They verify combined 
 ## Automatic connection recovery
 
 After Connect, the client retries status requests every second indefinitely, including after a failed jog request or failed initial connection. A request can take up to 2.2 seconds, and polls do not overlap. Recovery restores the controls from the current device status and clears the connection error without requiring another Connect click. Explicit Disconnect stops retries. Interrupted holds and queued movement commands are cancelled and never replayed. If the firmware has latched STOP or disabled PWM, ARM remains an explicit action; a fresh pointer or key press is required to jog again.
+
+## Jog speed
+
+The remote starts at Normal (50%). Slow is 25% and Fast is 100% of each axis's calibrated maximum speed. With default limits of 25°/s pan and 15°/s tilt, Normal requests 12.5°/s and 7.5°/s; Fast requests 25°/s and 15°/s. The remote shows both requested rates. Acceleration and braking remain jerk-limited. For higher maximum rates, disable PWM and edit the individual speed fields in Calibration, preserving measured pulse endpoints and angle limits. Saved calibration overrides firmware defaults. Rates and displayed angles are commanded values, not measurements from SG90 position feedback.
+
+## Displayed 60° but only a few degrees of physical movement
+
+The narrow startup pulses (1400/1500/1600 µs) are deliberately conservative, but the initial pan angle labels span −60° to +60°. A commanded +60° therefore emits only 1600 µs, not a verified physical 60° rotation. This also makes actual movement much slower than the requested degree rate until calibrated. The SG90 cannot measure the angle for us.
+
+Start unloaded with horns/linkage removed and a shaft marker. Measure the actual negative and positive angles at your current low/high pulses relative to the center. While disarmed, enter those measured angles in Calibration instead of the nominal labels. Then widen the pulse endpoints in 10–20 µs trials, disarming before every save and measuring the new endpoint angles; update the corresponding degree fields after each measurement. Stop before binding, buzzing or excessive heat. Calibrate pan and tilt separately. Refit the centered mechanism and narrow both pulse endpoints and their matching measured angle limits to physically tested clearances. Changing only the degree labels does not reduce the physical endpoint travel. Do not blindly choose 700/2300 µs: these are software bounds, not guaranteed safe endpoints for your motor or assembled mechanism. The initial numeric labels should not be interpreted as a measured servo specification.

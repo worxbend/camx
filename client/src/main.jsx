@@ -23,6 +23,7 @@ import CalibrationView from "./components/CalibrationView.jsx";
 import GuideView from "./components/GuideView.jsx";
 import "./style.css";
 import NavIcon from "./components/NavIcon.jsx";
+const DEFAULT_JOG_FRACTION = 0.5;
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 function App() {
   const [tab, setTab] = createSignal("Remote"),
@@ -52,7 +53,7 @@ function App() {
     [selectedAxis, setSelectedAxis] = createSignal(0),
     [wizard, setWizard] = createSignal(0),
     [busy, setBusy] = createSignal(false),
-    [jogFraction, setJogFraction] = createSignal(0.25),
+    [jogFraction, setJogFraction] = createSignal(DEFAULT_JOG_FRACTION),
     [heldVector, setHeldVector] = createSignal({ pan: 0, tilt: 0 }),
     [holding, setHolding] = createSignal(false);
   let pollBusy = false,
@@ -108,6 +109,7 @@ function App() {
     setError(e.message);
   };
   jogController = new JogController({
+    fraction: DEFAULT_JOG_FRACTION,
     canJog,
     send: (p, t) => transport.jog(p, t).catch(jogError),
     release: () => {

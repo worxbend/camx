@@ -117,6 +117,14 @@ export default function CalibrationView(props) {
                     Reverse servo direction if movement is opposite to your
                     chosen convention.
                   </p>
+                  <Show when={calibration()[axis].high - calibration()[axis].low <= 200}>
+                    <p class="hint" role="note">
+                      Narrow startup pulse range: angle labels are not yet proof of physical travel.
+                      At 1400–1600 µs, a displayed 60° can produce only a small real rotation.
+                      Measure each endpoint unloaded and enter its actual angle. Expand pulses in
+                      10–20 µs steps, disabling PWM before each save; stop before binding or buzzing.
+                    </p>
+                  </Show>
                   <h3>Pulse range (µs)</h3>
                   <div class="pulse-diagram">
                     <For each={["low", "center", "high"]}>
