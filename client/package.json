@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@solidjs/vite-plugin": "3.0.0-next.47",
-    "vite": "8.3.2",
+    "vite": "8.3.5",
     "@playwright/test": "1.55.1"
   },
   "engines": {
